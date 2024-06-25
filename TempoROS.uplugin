@@ -1,0 +1,34 @@
+﻿{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "1.0",
+	"FriendlyName": "TempoROS",
+	"Description": "Create ROS Nodes in an Unreal project",
+	"Category": "Other",
+	"CreatedBy": "Tempo Simulation, LLC",
+	"CreatedByURL": "http://temposimulation.com",
+	"DocsURL": "",
+	"MarketplaceURL": "",
+	"CanContainContent": true,
+	"IsBetaVersion": false,
+	"IsExperimentalVersion": false,
+	"Installed": false,
+	"Modules": [
+		{
+			"Name": "TempoROS",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		}
+	],
+	"PreBuildSteps": {
+		"Win64": [
+			"$(PluginDir)\\Scripts\\PreBuild.bat \"$(EngineDir)\" \"$(ProjectFile)\" \"$(ProjectDir)\" \"$(TargetName)\" \"$(TargetConfiguration)\" \"$(TargetPlatform)\" \"$(PluginDir)\\Source\\ThirdParty\\rclcpp\\Binaries\\Windows\""
+		],
+		"Mac": [
+			"$(PluginDir)/Scripts/GenROS.sh \"$(EngineDir)\" \"$(ProjectFile)\" \"$(ProjectDir)\" \"$(TargetName)\" \"$(TargetConfiguration)\" \"$(TargetPlatform)\" \"$(PluginDir)/Source/ThirdParty/rclcpp/Binaries/Mac\"",
+		],
+		"Linux": [
+			"$(PluginDir)/Scripts/PreBuild.sh \"$(EngineDir)\" \"$(ProjectFile)\" \"$(ProjectDir)\" \"$(TargetName)\" \"$(TargetConfiguration)\" \"$(TargetPlatform)\" \"$(PluginDir)/Source/ThirdParty/rclcpp/Binaries/Linux\"",
+		]
+	}
+}
