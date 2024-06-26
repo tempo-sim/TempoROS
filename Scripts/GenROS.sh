@@ -8,9 +8,23 @@ PROJECT_ROOT="${3//\\//}"
 TARGET_NAME="$4"
 TARGET_CONFIG="$5"
 TARGET_PLATFORM="$6"
-TOOL_DIR="${7//\\//}"
+RCLCPP_DIR="${7//\\//}"
 
-GENTOOL="$TOOL_DIR/rosidl"
+if [[ "$OSTYPE" = "msys" ]]; then
+  PLATFORM_FOLDER="Windows"
+elif [[ "$OSTYPE" = "darwin"* ]]; then
+  PLATFORM_FOLDER="Mac"
+elif [[ "$OSTYPE" = "linux-gnu"* ]]; then
+  PLATFORM_FOLDER="Linux"
+fi
+
+if [ -z ${PLATFORM_FOLDER+x} ]; then
+  echo "Unrecognized platform."
+  exit 1
+fi
+
+GENTOOL="$RCLCPP_DIR/Binaries/$PLATFORM_FOLDER/rosidl"
+export PYTHONPATH="$RCLCPP_DIR/Libraries/$PLATFORM_FOLDER/python3.9/site-packages"
 
 # Check for jq
 if ! which jq &> /dev/null; then
@@ -56,45 +70,43 @@ GEN_MODULE_MSG_AND_SRVS() {
   local MODULE_PATH="$1"
   local SOURCE_DIR="$MODULE_PATH/Private/"
   local DEST_DIR="$MODULE_PATH/Private/ROSGenerated"
+  mkdir -p "$DEST_DIR"
   local MODULE_NAME="$2"
+  local PACKAGE_NAME=$(echo "$MODULE_NAME" | tr '[:upper:]' '[:lower:]')
   
   local MODULE_GEN_TEMP_DIR
   MODULE_GEN_TEMP_DIR="$GEN_TEMP_DIR/$MODULE_NAME"
-  mkdir -p "$MODULE_GEN_TEMP_DIR"
+  mkdir -p "$MODULE_GEN_TEMP_DIR/$PACKAGE_NAME"
   if [[ "$OSTYPE" = "msys" ]]; then
     GENTOOL=$(cygpath -m "$GENTOOL")
     MODULE_GEN_TEMP_DIR=$(cygpath -m "$MODULE_GEN_TEMP_DIR")
   fi
-  for SRV in $(find "$SOURCE_DIR" -name "*.srv" -type f); do
+  cd "$SOURCE_DIR"
+  for FILE in $(find . \( -name "*.msg" -o -name "*.srv" \) -type f); do
     if [[ "$OSTYPE" = "msys" ]]; then
-      SRV=$(cygpath -m "$SRV")
+      FILE=$(cygpath -m "$FILE")
     fi
-    eval "$GENTOOL" generate "$MODULE_NAME" "$SRV" -o "$MODULE_GEN_TEMP_DIR"
-  done
-  for MSG in $(find "$SOURCE_DIR" -name "*.msg" -type f); do
-    if [[ "$OSTYPE" = "msys" ]]; then
-      MSG=$(cygpath -m "$MSG")
-    fi
-    eval "$GENTOOL" generate "$MODULE_NAME" "$MSG" -o "$MODULE_GEN_TEMP_DIR"
+    RELATIVE_PATH="${FILE#./}"
+    eval "$GENTOOL" generate --type cpp "$PACKAGE_NAME" "$SOURCE_DIR:$RELATIVE_PATH" -o "$MODULE_GEN_TEMP_DIR/$PACKAGE_NAME" 1> /dev/null
   done
 
+  cd "$MODULE_GEN_TEMP_DIR"
   REFRESHED_FILES=""
   # Replace any stale  files.
-  for GENERATED_FILE in $(find "$MODULE_GEN_TEMP_DIR" -type f); do    
+  for GENERATED_FILE in $(find . -type f); do    
     # Construct relative path
-    local RELATIVE_PATH="${GENERATED_FILE#$$MODULE_GEN_TEMP_DIR}"
-    RELATIVE_PATH="${RELATIVE_PATH:1}"
+    RELATIVE_PATH="${GENERATED_FILE#./}"
     local POSSIBLY_STALE_FILE="$DEST_DIR/$RELATIVE_PATH"
     REPLACE_IF_STALE "$GENERATED_FILE" "$POSSIBLY_STALE_FILE"
     REFRESHED_FILES="$REFRESHED_FILES $POSSIBLY_STALE_FILE"
   done
   
-#  # Remove any generated files that were not refreshed this time.
-#  for FILE in $(find "$MODULE_PATH" -type f); do
-#    if [[ ! $REFRESHED_FILES =~ $FILE ]]; then
-#      rm "$FILE"
-#    fi
-#  done
+  # Remove any generated files that were not refreshed this time.
+  for FILE in $(find "$DEST_DIR" -type f); do
+    if [[ ! $REFRESHED_FILES =~ $FILE ]]; then
+      rm "$FILE"
+    fi
+  done
 }
 
 echo "Generating ROS IDL code..."
