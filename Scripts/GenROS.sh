@@ -48,6 +48,10 @@ fi
 # The temp directory where we will store the generated code, instead of just copying it directly to the source
 # folder, thereby avoiding copying files that have not changed and triggering unnecessary rebuilds.
 TEMP=$(mktemp -d)
+SRC_TEMP_DIR="$TEMP/Source"
+mkdir "$SRC_TEMP_DIR"
+INCLUDES_TEMP_DIR="$TEMP/Includes"
+mkdir -p "$INCLUDES_TEMP_DIR"
 GEN_TEMP_DIR="$TEMP/Generated"
 mkdir -p "$GEN_TEMP_DIR"
 
@@ -55,7 +59,7 @@ mkdir -p "$GEN_TEMP_DIR"
 REPLACE_IF_STALE () {
   local FRESH="$1"
   local POSSIBLY_STALE="$2"
-  
+
   if [ ! -f "$POSSIBLY_STALE" ]; then
     mkdir -p "$(dirname "$POSSIBLY_STALE")"
     cp -p "$FRESH" "$POSSIBLY_STALE"
@@ -67,13 +71,16 @@ REPLACE_IF_STALE () {
 }
 
 GEN_MODULE_MSG_AND_SRVS() {
-  local MODULE_PATH="$1"
-  local SOURCE_DIR="$MODULE_PATH/Private/"
-  local DEST_DIR="$MODULE_PATH/Private/ROSGenerated"
-  mkdir -p "$DEST_DIR"
-  local MODULE_NAME="$2"
-  local PACKAGE_NAME=$(echo "$MODULE_NAME" | tr '[:upper:]' '[:lower:]')
-  
+  local INCLUDE_DIR="$1"
+  local MODULE_PATH="$2"
+  local PRIVATE_DEST_DIR="$MODULE_PATH/Private"
+  local PUBLIC_DEST_DIR="$MODULE_PATH/Public"
+  local MODULE_NAME="$3"
+  local SOURCE_DIR="$INCLUDE_DIR"/"$MODULE_NAME"
+  local PACKAGE_NAME
+  # PascalCase module name to snake_case
+  PACKAGE_NAME=$(echo "$MODULE_NAME" | sed -E 's/([A-Z])([A-Z])([a-z])/\1_\2\3/g' | sed -E 's/([a-z])([A-Z])/\1_\2/g' | tr '[:upper:]' '[:lower:]')
+
   local MODULE_GEN_TEMP_DIR
   MODULE_GEN_TEMP_DIR="$GEN_TEMP_DIR/$MODULE_NAME"
   mkdir -p "$MODULE_GEN_TEMP_DIR/$PACKAGE_NAME"
@@ -87,7 +94,13 @@ GEN_MODULE_MSG_AND_SRVS() {
       FILE=$(cygpath -m "$FILE")
     fi
     RELATIVE_PATH="${FILE#./}"
-    eval "$GENTOOL" generate --type cpp "$PACKAGE_NAME" "$SOURCE_DIR:$RELATIVE_PATH" -o "$MODULE_GEN_TEMP_DIR/$PACKAGE_NAME" 1> /dev/null
+    GEN_COMMAND="$GENTOOL generate --type cpp $PACKAGE_NAME $SOURCE_DIR:$RELATIVE_PATH -o $MODULE_GEN_TEMP_DIR/$PACKAGE_NAME"
+    for SUBDIR in "$INCLUDE_DIR"/*/ ; do
+        if [ -d "$SUBDIR" ]; then
+            GEN_COMMAND+=" -I $(realpath "$SUBDIR")"
+        fi
+    done
+    eval "$GEN_COMMAND" 1> /dev/null
   done
 
   cd "$MODULE_GEN_TEMP_DIR"
@@ -96,20 +109,76 @@ GEN_MODULE_MSG_AND_SRVS() {
   for GENERATED_FILE in $(find . -type f); do    
     # Construct relative path
     RELATIVE_PATH="${GENERATED_FILE#./}"
-    local POSSIBLY_STALE_FILE="$DEST_DIR/$RELATIVE_PATH"
+    
+#        RELATIVE_PATH="${RELATIVE_PATH:1}"
+#        MODULE_SRC_TEMP_DIR="$SRC_TEMP_DIR/$MODULE_NAME"
+#        if [[ $GENERATED_FILE == *pb.h ]]; then
+#          # Header files go in the Public directory *if* they are Public
+#          STRIPPED_PATH="${RELATIVE_PATH#"$MODULE_NAME"}"
+#          STRIPPED_PATH="${STRIPPED_PATH%%.*}.proto"
+#          if [[ -f "$MODULE_SRC_TEMP_DIR/Public$STRIPPED_PATH" ]]; then
+#            local POSSIBLY_STALE_FILE="$PUBLIC_DEST_DIR/$RELATIVE_PATH"
+#          else
+#            local POSSIBLY_STALE_FILE="$PRIVATE_DEST_DIR/$RELATIVE_PATH"
+#          fi
+#        else
+#          local POSSIBLY_STALE_FILE="$PRIVATE_DEST_DIR/$RELATIVE_PATH"
+#        fi
+    
+    local POSSIBLY_STALE_FILE="$PUBLIC_DEST_DIR/$RELATIVE_PATH"
     REPLACE_IF_STALE "$GENERATED_FILE" "$POSSIBLY_STALE_FILE"
     REFRESHED_FILES="$REFRESHED_FILES $POSSIBLY_STALE_FILE"
   done
-  
+
   # Remove any generated files that were not refreshed this time.
-  for FILE in $(find "$DEST_DIR" -type f); do
-    if [[ ! $REFRESHED_FILES =~ $FILE ]]; then
-      rm "$FILE"
-    fi
-  done
+  if [ -d "$PUBLIC_DEST_DIR/$PACKAGE_NAME" ]; then
+    for FILE in $(find "$PUBLIC_DEST_DIR/$PACKAGE_NAME" -type f); do
+      if [[ ! $REFRESHED_FILES =~ $FILE ]]; then
+        rm "$FILE"
+      fi
+    done
+  fi
+  
+  if [ -d "$PUBLIC_DEST_DIR/$PACKAGE_NAME" ]; then
+    find "$PUBLIC_DEST_DIR/$PACKAGE_NAME" -type d -empty -delete
+  fi
 }
 
 echo "Generating ROS IDL code..."
+
+# First iterate through all the modules to:
+# - Copy all ROS IDL files to a temp source directory - one per module!
+# - Check that no module names are repeated
+for BUILD_CS_FILE in $(find "$PROJECT_ROOT" -name '*.Build.cs' -type f); do
+  BUILD_CS_FILENAME="$(basename "$BUILD_CS_FILE")"
+  MODULE_NAME="${BUILD_CS_FILENAME%%.*}"
+  MODULE_PATH="$(dirname "$BUILD_CS_FILE")"
+  MODULE_SRC_TEMP_DIR="$SRC_TEMP_DIR/$MODULE_NAME"
+  if [ -d "$MODULE_SRC_TEMP_DIR" ]; then
+    echo "Multiple modules named $MODULE_NAME found. Please rename one."
+    exit 1
+  fi
+  mkdir -p "$MODULE_SRC_TEMP_DIR/Public"
+  mkdir -p "$MODULE_SRC_TEMP_DIR/Private"
+  if [ -d "$MODULE_PATH/Public" ]; then
+    for PUBLIC_FILE in $(find "$MODULE_PATH/Public" \( -name "*.msg" -o -name "*.srv" \) -type f); do
+      RELATIVE_PATH="${PUBLIC_FILE#$MODULE_PATH}"
+      RELATIVE_PATH="${RELATIVE_PATH:1}"
+      MODULE_SRC_TEMP_DIR_DEST="$MODULE_SRC_TEMP_DIR/$RELATIVE_PATH"
+      mkdir -p "$(dirname $MODULE_SRC_TEMP_DIR_DEST)"
+      cp "$PUBLIC_FILE" "$MODULE_SRC_TEMP_DIR/$RELATIVE_PATH"
+    done
+  fi
+  if [ -d "$MODULE_PATH/Private" ]; then
+    for PRIVATE_FILE in $(find "$MODULE_PATH/Private" \( -name "*.msg" -o -name "*.srv" \) -type f); do
+      RELATIVE_PATH="${PRIVATE_FILE#$MODULE_PATH}"
+      RELATIVE_PATH="${RELATIVE_PATH:1}"
+      MODULE_SRC_TEMP_DIR_DEST="$MODULE_SRC_TEMP_DIR/$RELATIVE_PATH"
+      mkdir -p "$(dirname "$MODULE_SRC_TEMP_DIR_DEST")"
+      cp "$PRIVATE_FILE" "$MODULE_SRC_TEMP_DIR/$RELATIVE_PATH"
+    done
+  fi
+done
 
 # Find dotnet
 cd "$ENGINE_DIR"
@@ -135,7 +204,85 @@ fi
 # Then dump a json describing all module dependencies.
 eval "$DOTNET" "./Binaries/DotNET/UnrealBuildTool/UnrealBuildTool.dll" -Mode=JsonExport "$TARGET_NAME" "$TARGET_PLATFORM" "$TARGET_CONFIG" -Project="$PROJECT_FILE" -OutputFile="$TEMP/TempoModules.json" -NoMutex > /dev/null 2>&1
 
-# Iterate over all the modules to ROS IDL code
+SYNC_MSGS_SRVS() {
+  SRC="$1"
+  DEST="$2"
+  if [[ "$OSTYPE" = "msys" ]]; then
+    # robocopy uses non-zero exit codes even for successful exit conditions.
+    set +e
+    SRC=$(cygpath -m "$SRC")
+    DEST=$(cygpath -m "$DEST")
+    robocopy "$SRC" "$DEST" "*.srv" "*.msg" -s > /dev/null 2>&1
+    set -e
+  else
+    rsync -av --include="*/" --include="*.msg" --include="*.srv" --exclude="*" "$SRC" "$DEST" > /dev/null 2>&1
+  fi
+}
+
+GET_MODULE_INCLUDES_PUBLIC_ONLY() {
+  local MODULE_NAME="$1"
+  local INCLUDES_DIR="$2"
+  PUBLIC_DEPENDENCIES=$(jq -r --arg TargetName "$TARGET_NAME" --arg ModuleName "$MODULE_NAME" \
+    'select(.Name == $TargetName)["Modules"][$ModuleName]["PublicDependencyModules"][]' < "$TEMP/TempoModules.json")
+  for PUBLIC_DEPENDENCY in $PUBLIC_DEPENDENCIES; do
+    PUBLIC_DEPENDENCY=$(echo "$PUBLIC_DEPENDENCY" | sed 's/\[rn]//')
+    if [ -d "$SRC_TEMP_DIR/$PUBLIC_DEPENDENCY" ]; then # Only consider project modules
+      if [ -d "$INCLUDES_DIR/$PUBLIC_DEPENDENCY" ]; then
+        # We already have this dependency - but still add its public dependencies.
+        GET_MODULE_INCLUDES_PUBLIC_ONLY "$PUBLIC_DEPENDENCY" "$INCLUDES_DIR"
+      else
+        # This is a new dependency - add its public ROS IDL files and those of its public dependencies.
+        mkdir -p "$INCLUDES_DIR/$PUBLIC_DEPENDENCY"
+        SYNC_MSGS_SRVS "$SRC_TEMP_DIR/$PUBLIC_DEPENDENCY/Public/" "$INCLUDES_DIR/$PUBLIC_DEPENDENCY"
+        GET_MODULE_INCLUDES_PUBLIC_ONLY "$PUBLIC_DEPENDENCY" "$INCLUDES_DIR"
+      fi
+    fi
+  done
+}
+
+GET_MODULE_INCLUDES() {  
+  local MODULE_NAME="$1"
+  local INCLUDES_DIR="$2"
+  # First copy everything from this modules public and private folders.
+  mkdir -p "$INCLUDES_DIR/$MODULE_NAME"
+  SYNC_MSGS_SRVS "$SRC_TEMP_DIR/$MODULE_NAME/Public/" "$INCLUDES_DIR/$MODULE_NAME"
+  SYNC_MSGS_SRVS "$SRC_TEMP_DIR/$MODULE_NAME/Private/" "$INCLUDES_DIR/$MODULE_NAME"
+  PUBLIC_DEPENDENCIES=$(jq -r --arg TargetName "$TARGET_NAME" --arg ModuleName "$MODULE_NAME" \
+    'select(.Name == $TargetName)["Modules"][$ModuleName]["PublicDependencyModules"][]' < "$TEMP/TempoModules.json")
+  PRIVATE_DEPENDENCIES=$(jq -r --arg TargetName "$TARGET_NAME" --arg ModuleName "$MODULE_NAME" \
+    'select(.Name == $TargetName)["Modules"][$ModuleName]["PrivateDependencyModules"][]' < "$TEMP/TempoModules.json")
+  for PUBLIC_DEPENDENCY in $PUBLIC_DEPENDENCIES; do
+    PUBLIC_DEPENDENCY=$(echo "$PUBLIC_DEPENDENCY" | sed 's/\[rn]//')
+    if [ -d "$SRC_TEMP_DIR/$PUBLIC_DEPENDENCY" ]; then # Only consider project modules
+      if [ -d "$INCLUDES_DIR/$PUBLIC_DEPENDENCY" ]; then
+        # We already have this dependency - but still add its public dependencies.
+        GET_MODULE_INCLUDES_PUBLIC_ONLY "$PUBLIC_DEPENDENCY" "$INCLUDES"
+      else
+        # This is a new dependency - add its public ROS IDL files and those of its public dependencies.
+        mkdir -p "$INCLUDES_DIR/$PUBLIC_DEPENDENCY"
+        SYNC_MSGS_SRVS "$SRC_TEMP_DIR/$PUBLIC_DEPENDENCY/Public/" "$INCLUDES_DIR/$PUBLIC_DEPENDENCY"
+        GET_MODULE_INCLUDES_PUBLIC_ONLY "$PUBLIC_DEPENDENCY" "$INCLUDES_DIR"
+      fi
+    fi
+  done
+
+  for PRIVATE_DEPENDENCY in $PRIVATE_DEPENDENCIES; do   
+    PRIVATE_DEPENDENCY=$(echo "$PRIVATE_DEPENDENCY" | sed 's/\[rn]//')
+    if [[ -d "$SRC_TEMP_DIR/$PRIVATE_DEPENDENCY" ]]; then # Only consider project modules
+      if [[ -d "$INCLUDES_DIR/$PRIVATE_DEPENDENCY" ]]; then
+        # We already have this dependency - but still add its public dependencies.
+        GET_MODULE_INCLUDES_PUBLIC_ONLY "$MODULE_NAME" "$INCLUDES"
+      else
+        # This is a new dependency - add its public ROS IDL files and those of its public dependencies.
+        mkdir -p "$INCLUDES_DIR/$PRIVATE_DEPENDENCY"
+        SYNC_MSGS_SRVS "$SRC_TEMP_DIR/$PRIVATE_DEPENDENCY/Public/" "$INCLUDES_DIR/$PRIVATE_DEPENDENCY" > /dev/null 2>&1
+        GET_MODULE_INCLUDES_PUBLIC_ONLY "$PRIVATE_DEPENDENCY" "$INCLUDES_DIR"
+      fi
+    fi
+  done
+}
+
+# Lastly, iterate over all the modules again to generate the ROS IDL code
 for BUILD_CS_FILE in $(find "$PROJECT_ROOT" -name '*.Build.cs' -type f); do
   BUILD_CS_FILENAME="$(basename "$BUILD_CS_FILE")"
   MODULE_NAME="${BUILD_CS_FILENAME%%.*}"
@@ -145,8 +292,9 @@ for BUILD_CS_FILE in $(find "$PROJECT_ROOT" -name '*.Build.cs' -type f); do
   if [ "$MODULE_TYPE" != "CPlusPlus" ]; then
     continue
   fi
-
-  GEN_MODULE_MSG_AND_SRVS "$MODULE_PATH" "$MODULE_NAME"
+  MODULE_INCLUDES_TEMP_DIR="$INCLUDES_TEMP_DIR/$MODULE_NAME"
+  GET_MODULE_INCLUDES "$MODULE_NAME" "$MODULE_INCLUDES_TEMP_DIR"
+  GEN_MODULE_MSG_AND_SRVS "$MODULE_INCLUDES_TEMP_DIR" "$MODULE_PATH" "$MODULE_NAME"
 done
 
 rm -rf "$TEMP"
