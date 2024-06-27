@@ -71,7 +71,7 @@ struct TMessageTypeTraits
 #define DEFINE_TEMOPROS_BP_EVENT(MessageType) \
 	DECLARE_DYNAMIC_DELEGATE_OneParam(FTempoROSMessageReceived, MessageType, Value);
 
-#define DEFINE_TEMPOROS_BP_METHODS(MessageType) \
+#define DEFINE_TEMPOROS_BP_PUBLISH(MessageType) \
 	UFUNCTION(BlueprintCallable) \
 	static bool PublishMessageType(UTempoROSNode* Node, const FString& Topic, const MessageType& Message) \
 	{ \

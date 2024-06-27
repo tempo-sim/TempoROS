@@ -4,8 +4,8 @@
 
 #include "TempoROS.h"
 #include "TempoROSPublisher.h"
-#include "TempoROSSubscription.h"
 #include "TempoROSService.h"
+#include "TempoROSSubscription.h"
 
 #include "rclcpp.h"
 
@@ -23,7 +23,7 @@ public:
 	{
 		if (Publishers.Contains(Topic))
 		{
-			UE_LOG(LogTempoROS, Error, TEXT("Node %s already has publisher for topic"), *Topic);
+			UE_LOG(LogTempoROS, Error, TEXT("Node already has publisher for topic %s"), *Topic);
 			return false;
 		}
 		Publishers.Add(Topic, TTempoROSPublisher<MessageType>(Node, Topic));
@@ -38,53 +38,36 @@ public:
 	}
 
 	template <typename ServiceType>
-	TTempoROSService<ServiceType> AddService(const FString& Topic, const TROSServiceDelegate<ServiceType>& Callback)
+	bool AddService(const FString& Name, const TROSServiceDelegate<ServiceType>& Callback)
 	{
-		return TTempoROSService<ServiceType>(Node, Topic, Callback);
+		if (Services.Contains(Name))
+		{
+			UE_LOG(LogTempoROS, Error, TEXT("Node %s already has service with name %s"), *Name);
+			return false;
+		}
+		Services.Add(Name, TTempoROSService<ServiceType>(Node, Name, Callback));
+		return true;
 	}
 
 	template <typename MessageType>
 	bool Publish(const FString& Topic, const MessageType& Message)
 	{
-		if (const auto Publisher = Publishers.Find(Topic))
+		FTempoROSPublisher& Publisher = Publishers.FindOrAdd(Topic, TTempoROSPublisher<MessageType>(Node, Topic));
+		if (const TTempoROSPublisher<MessageType>* TypedPublisher = Cast<MessageType>(&Publisher))
 		{
-			if (const TTempoROSPublisher<MessageType>* TypedPublisher = Cast<MessageType>(Publisher))
-			{
-				TypedPublisher->Publish(Message);
-				return true;
-			}
-			UE_LOG(LogTempoROS, Error, TEXT("Publisher for topic %s did not have correct type"), *Topic);
-			return false;
+			TypedPublisher->Publish(Message);
+			return true;
 		}
-		UE_LOG(LogTempoROS, Error, TEXT("No publisher found for topic %s"), *Topic);
+		UE_LOG(LogTempoROS, Error, TEXT("Publisher for topic %s did not have correct type"), *Topic);
 		return false;
 	}
-
-	// bool Publish(const FString& Topic, const FTempoROSMessage& Message)
-	// {
-	// 	if (const auto Publisher = Publishers.Find(Topic))
-	// 	{
-	// 		if (Publisher->GetMessageType() == Message.GetType())
-	// 		{
-	// 			Publisher->Publish((void*)&Message);
-	// 		}
-	// 		// if (const TTempoROSPublisher<MessageType>* TypedPublisher = Cast<MessageType>(Publisher))
-	// 		// {
-	// 		// 	TypedPublisher->Publish(Message);
-	// 		// 	return true;
-	// 		// }
-	// 		UE_LOG(LogTempoROS, Error, TEXT("Publisher for topic %s did not have correct type"), *Topic);
-	// 		return false;
-	// 	}
-	// 	UE_LOG(LogTempoROS, Error, TEXT("No publisher found for topic %s"), *Topic);
-	// 	return false;
-	// }
 
 	void Tick() const;
 
 private:
 	TMap<FString, FTempoROSPublisher> Publishers;
 	TMap<FString, TArray<FTempoROSSubscription>> Subscriptions;
+	TMap<FString, FTempoROSService> Services;
 	
 	std::shared_ptr<rclcpp::Node> Node = nullptr;
 };

@@ -10,7 +10,6 @@ struct FTempoROSPublisher
 {
 	virtual ~FTempoROSPublisher() = default;
 	virtual FName GetMessageType() const { return FName(NAME_None); }
-	// virtual void Publish(void* Message) {};
 };
 
 template <typename MessageType>
@@ -25,12 +24,7 @@ struct TTempoROSPublisher : FTempoROSPublisher
 	{
 		Publisher->publish(TToROSConverter<MessageType>::Convert(Message));
 	}
-
-	// virtual void Publish(void* Message)
-	// {
-	// 	Publish(*static_cast<MessageType*>(Message));
-	// }
-
+	
 	virtual FName GetMessageType() const override
 	{
 		return TMessageTypeTraits<MessageType>::MessageTypeDescriptor;

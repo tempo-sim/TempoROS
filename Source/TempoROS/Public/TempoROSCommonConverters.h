@@ -9,7 +9,7 @@
 #include "Kismet/BlueprintFunctionLibrary.h"
 
 template <>
-struct TToROSConverter<FString> : TConverter<TToROSConverter<FString>>
+struct TToROSConverter<FString> : TConverter<TToROSConverter<FString>> // TempoROS__BPSupport
 {
 	using FromType = FString;
 	using ToType = std_msgs::msg::String;
@@ -22,7 +22,7 @@ struct TToROSConverter<FString> : TConverter<TToROSConverter<FString>>
 };
 
 template <>
-struct TFromROSConverter<FString> : TConverter<TFromROSConverter<FString>>
+struct TFromROSConverter<FString> : TConverter<TFromROSConverter<FString>> // TempoROS__BPSupport
 {
 	using ToType = FString;
 	using FromType = std_msgs::msg::String;
