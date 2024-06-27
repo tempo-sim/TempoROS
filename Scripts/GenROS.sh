@@ -70,6 +70,18 @@ REPLACE_IF_STALE () {
   fi
 }
 
+PASCAL_TO_SNAKE() {
+    echo "$1" | sed -E 's/([A-Z])([A-Z])([a-z])/\1_\2\3/g' | sed -E 's/([a-z])([A-Z])/\1_\2/g' | tr '[:upper:]' '[:lower:]'
+}
+
+SNAKE_TO_PASCAL() {
+    local input="$1"
+    # Remove __ and anything after
+    input="${input%%__*}"
+    # Capitalize first letter of each word and remove underscores
+    echo "$input" | awk 'BEGIN{FS=OFS="_"} {for(i=1;i<=NF;i++) $i=toupper(substr($i,1,1)) tolower(substr($i,2))} 1' | tr -d '_'
+}
+
 GEN_MODULE_MSG_AND_SRVS() {
   local INCLUDE_DIR="$1"
   local MODULE_PATH="$2"
@@ -79,7 +91,7 @@ GEN_MODULE_MSG_AND_SRVS() {
   local SOURCE_DIR="$INCLUDE_DIR"/"$MODULE_NAME"
   local PACKAGE_NAME
   # PascalCase module name to snake_case
-  PACKAGE_NAME=$(echo "$MODULE_NAME" | sed -E 's/([A-Z])([A-Z])([a-z])/\1_\2\3/g' | sed -E 's/([a-z])([A-Z])/\1_\2/g' | tr '[:upper:]' '[:lower:]')
+  PACKAGE_NAME=$(PASCAL_TO_SNAKE "$MODULE_NAME")
 
   local MODULE_GEN_TEMP_DIR
   MODULE_GEN_TEMP_DIR="$GEN_TEMP_DIR/$MODULE_NAME"
@@ -109,23 +121,29 @@ GEN_MODULE_MSG_AND_SRVS() {
   for GENERATED_FILE in $(find . -type f); do    
     # Construct relative path
     RELATIVE_PATH="${GENERATED_FILE#./}"
+    if [[ "$RELATIVE_PATH" = "$PACKAGE_NAME/msg"* ]]; then
+      local EXTENSION="msg"
+    elif [[ "$RELATIVE_PATH" = "$PACKAGE_NAME/srv"* ]]; then
+      local EXTENSION="srv"
+    elif [[ "$RELATIVE_PATH" = "$PACKAGE_NAME/tmp"* ]]; then
+      continue
+    else
+      echo "Unmatched relative path"
+      exit 1
+    fi
+    local FILENAME
+    FILENAME=$(basename "$RELATIVE_PATH")
+    FILENAME_NO_EXT=${FILENAME%.*}
+    FILENAME_NO_EXT=$(SNAKE_TO_PASCAL "$FILENAME_NO_EXT")
+    ORIGINAL_FILENAME="$FILENAME_NO_EXT.$EXTENSION"
+    MODULE_SRC_TEMP_DIR="$SRC_TEMP_DIR/$MODULE_NAME"
+    # If the original file was in Public, the generated files go in public
+    if find "$MODULE_SRC_TEMP_DIR/Public" -name "$ORIGINAL_FILENAME" | grep -q .; then
+      local POSSIBLY_STALE_FILE="$PUBLIC_DEST_DIR/$RELATIVE_PATH"
+    else
+      local POSSIBLY_STALE_FILE="$PRIVATE_DEST_DIR/$RELATIVE_PATH"
+    fi
     
-#        RELATIVE_PATH="${RELATIVE_PATH:1}"
-#        MODULE_SRC_TEMP_DIR="$SRC_TEMP_DIR/$MODULE_NAME"
-#        if [[ $GENERATED_FILE == *pb.h ]]; then
-#          # Header files go in the Public directory *if* they are Public
-#          STRIPPED_PATH="${RELATIVE_PATH#"$MODULE_NAME"}"
-#          STRIPPED_PATH="${STRIPPED_PATH%%.*}.proto"
-#          if [[ -f "$MODULE_SRC_TEMP_DIR/Public$STRIPPED_PATH" ]]; then
-#            local POSSIBLY_STALE_FILE="$PUBLIC_DEST_DIR/$RELATIVE_PATH"
-#          else
-#            local POSSIBLY_STALE_FILE="$PRIVATE_DEST_DIR/$RELATIVE_PATH"
-#          fi
-#        else
-#          local POSSIBLY_STALE_FILE="$PRIVATE_DEST_DIR/$RELATIVE_PATH"
-#        fi
-    
-    local POSSIBLY_STALE_FILE="$PUBLIC_DEST_DIR/$RELATIVE_PATH"
     REPLACE_IF_STALE "$GENERATED_FILE" "$POSSIBLY_STALE_FILE"
     REFRESHED_FILES="$REFRESHED_FILES $POSSIBLY_STALE_FILE"
   done
@@ -142,6 +160,19 @@ GEN_MODULE_MSG_AND_SRVS() {
   if [ -d "$PUBLIC_DEST_DIR/$PACKAGE_NAME" ]; then
     find "$PUBLIC_DEST_DIR/$PACKAGE_NAME" -type d -empty -delete
   fi
+  
+    # Remove any generated files that were not refreshed this time.
+    if [ -d "$PRIVATE_DEST_DIR/$PACKAGE_NAME" ]; then
+      for FILE in $(find "$PRIVATE_DEST_DIR/$PACKAGE_NAME" -type f); do
+        if [[ ! $REFRESHED_FILES =~ $FILE ]]; then
+          rm "$FILE"
+        fi
+      done
+    fi
+    
+    if [ -d "$PRIVATE_DEST_DIR/$PACKAGE_NAME" ]; then
+      find "$PRIVATE_DEST_DIR/$PACKAGE_NAME" -type d -empty -delete
+    fi
 }
 
 echo "Generating ROS IDL code..."
@@ -149,6 +180,7 @@ echo "Generating ROS IDL code..."
 # First iterate through all the modules to:
 # - Copy all ROS IDL files to a temp source directory - one per module!
 # - Check that no module names are repeated
+# - Check that all ROS IDL files are in the correct locations
 for BUILD_CS_FILE in $(find "$PROJECT_ROOT" -name '*.Build.cs' -type f); do
   BUILD_CS_FILENAME="$(basename "$BUILD_CS_FILE")"
   MODULE_NAME="${BUILD_CS_FILENAME%%.*}"
@@ -161,6 +193,18 @@ for BUILD_CS_FILE in $(find "$PROJECT_ROOT" -name '*.Build.cs' -type f); do
   mkdir -p "$MODULE_SRC_TEMP_DIR/Public"
   mkdir -p "$MODULE_SRC_TEMP_DIR/Private"
   if [ -d "$MODULE_PATH/Public" ]; then
+    if [ -d "$MODULE_PATH/Public/msg" ]; then
+      if find "$MODULE_PATH/Public/msg" -type f -not -name "*.msg" | grep -q .; then
+        echo "Found non-msg file in $MODULE_PATH/Public/msg"
+        exit 1
+      fi
+    fi
+    if [ -d "$MODULE_PATH/Public/srv" ]; then
+      if find "$MODULE_PATH/Public/srv" -type f -not -name "*.srv" | grep -q .; then
+        echo "Found non-srv file in $MODULE_PATH/Public/srv"
+        exit 1
+      fi
+    fi
     for PUBLIC_FILE in $(find "$MODULE_PATH/Public" \( -name "*.msg" -o -name "*.srv" \) -type f); do
       RELATIVE_PATH="${PUBLIC_FILE#$MODULE_PATH}"
       RELATIVE_PATH="${RELATIVE_PATH:1}"
@@ -170,6 +214,18 @@ for BUILD_CS_FILE in $(find "$PROJECT_ROOT" -name '*.Build.cs' -type f); do
     done
   fi
   if [ -d "$MODULE_PATH/Private" ]; then
+    if [ -d "$MODULE_PATH/Private/msg" ]; then
+      if find "$MODULE_PATH/Private/msg" -type f -not -name "*.msg" | grep -q .; then
+        echo "Found non-msg file in $MODULE_PATH/Private/msg"
+        exit 1
+      fi
+    fi
+    if [ -d "$MODULE_PATH/Private/srv" ]; then
+      if find "$MODULE_PATH/Private/srv" -type f -not -name "*.srv" | grep -q .; then
+        echo "Found non-srv file in $MODULE_PATH/Private/srv"
+        exit 1
+      fi
+    fi
     for PRIVATE_FILE in $(find "$MODULE_PATH/Private" \( -name "*.msg" -o -name "*.srv" \) -type f); do
       RELATIVE_PATH="${PRIVATE_FILE#$MODULE_PATH}"
       RELATIVE_PATH="${RELATIVE_PATH:1}"
