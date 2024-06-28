@@ -6,8 +6,6 @@
 
 #include "std_msgs/msg/String.hpp"
 
-#include "Kismet/BlueprintFunctionLibrary.h"
-
 template <>
 struct TToROSConverter<FString> : TConverter<TToROSConverter<FString>> // TempoROS__BPSupport
 {

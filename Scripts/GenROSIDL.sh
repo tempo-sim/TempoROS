@@ -106,7 +106,7 @@ GEN_MODULE_MSG_AND_SRVS() {
       FILE=$(cygpath -m "$FILE")
     fi
     RELATIVE_PATH="${FILE#./}"
-    GEN_COMMAND="$GENTOOL generate --type cpp $PACKAGE_NAME $SOURCE_DIR:$RELATIVE_PATH -o $MODULE_GEN_TEMP_DIR/$PACKAGE_NAME"
+    GEN_COMMAND="$GENTOOL generate --type cpp --type-support cpp $PACKAGE_NAME $SOURCE_DIR:$RELATIVE_PATH -o $MODULE_GEN_TEMP_DIR/$PACKAGE_NAME"
     for SUBDIR in "$INCLUDE_DIR"/*/ ; do
         if [ -d "$SUBDIR" ]; then
             GEN_COMMAND+=" -I $(realpath "$SUBDIR")"
@@ -121,14 +121,14 @@ GEN_MODULE_MSG_AND_SRVS() {
   for GENERATED_FILE in $(find . -type f); do    
     # Construct relative path
     RELATIVE_PATH="${GENERATED_FILE#./}"
-    if [[ "$RELATIVE_PATH" = "$PACKAGE_NAME/msg"* ]]; then
+    if [[ "$RELATIVE_PATH" = "$PACKAGE_NAME/cpp/msg"* ]]; then
       local EXTENSION="msg"
-    elif [[ "$RELATIVE_PATH" = "$PACKAGE_NAME/srv"* ]]; then
+    elif [[ "$RELATIVE_PATH" = "$PACKAGE_NAME/cpp/srv"* ]]; then
       local EXTENSION="srv"
-    elif [[ "$RELATIVE_PATH" = "$PACKAGE_NAME/tmp"* ]]; then
+    elif [[ "$RELATIVE_PATH" = "$PACKAGE_NAME/cpp/tmp"* ]]; then
       continue
     else
-      echo "Unmatched relative path"
+      echo "Unmatched relative path: $RELATIVE_PATH"
       exit 1
     fi
     local FILENAME
@@ -137,6 +137,8 @@ GEN_MODULE_MSG_AND_SRVS() {
     FILENAME_NO_EXT=$(SNAKE_TO_PASCAL "$FILENAME_NO_EXT")
     ORIGINAL_FILENAME="$FILENAME_NO_EXT.$EXTENSION"
     MODULE_SRC_TEMP_DIR="$SRC_TEMP_DIR/$MODULE_NAME"
+    # Remove /cpp from RELATIVE_PATH
+    RELATIVE_PATH=${RELATIVE_PATH//\/cpp/}
     # If the original file was in Public, the generated files go in public
     if find "$MODULE_SRC_TEMP_DIR/Public" -name "$ORIGINAL_FILENAME" | grep -q .; then
       local POSSIBLY_STALE_FILE="$PUBLIC_DEST_DIR/$RELATIVE_PATH"
