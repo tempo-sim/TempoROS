@@ -4,33 +4,72 @@
 
 #include "rclcpp/utilities.hpp"
 
-class NodeFactory
+// Makes sure rclcpp is initialized before creating a node
+class FNodeFactory
 {
 public:
-	static std::shared_ptr<rclcpp::Node> MakeNode(const FString& Name)
+	std::shared_ptr<rclcpp::Node> MakeNode(const FString& Name, const rclcpp::NodeOptions& Options)
 	{
 		if (!bInitialized)
 		{
 			Initialize();
 		}
-		return std::make_shared<rclcpp::Node>(TCHAR_TO_UTF8(*Name), rclcpp::NodeOptions());
+		return std::make_shared<rclcpp::Node>(TCHAR_TO_UTF8(*Name), Options);
 	}
 
+	static FNodeFactory* GetInstance() { return Instance; }
+
 private:
-	static void Initialize()
+	void Initialize()
 	{
 		rclcpp::init(0, nullptr);
 		bInitialized = true;
 	}
-	static bool bInitialized;
+	
+	bool bInitialized = false;
+
+	static FNodeFactory* Instance;
 };
 
-bool NodeFactory::bInitialized = false;
+FNodeFactory* FNodeFactory::Instance;
 
-UTempoROSNode::UTempoROSNode()
-	: Node(NodeFactory::MakeNode("GreatNode")) { }
+UTempoROSNode* UTempoROSNode::Create(const FString& NodeName, UObject* Outer, UWorld* TickWithWorld, const rclcpp::NodeOptions& NodeOptions)
+{
+	UTempoROSNode* NewNode = NewObject<UTempoROSNode>(Outer);
+	NewNode->Init(NodeName, NodeOptions);
+	if (TickWithWorld)
+	{
+		// ROS has nothing to do with movie scene sequences, but this event fires in exactly the right conditions:
+		// After world time has been updated for the current frame, before Actor ticks have begun, and even when paused.
+		TickWithWorld->AddMovieSceneSequenceTickHandler(FOnMovieSceneSequenceTick::FDelegate::CreateUObject(NewNode, &UTempoROSNode::Tick));
+	}
+	return NewNode;
+}
 
-void UTempoROSNode::Tick() const
+void UTempoROSNode::Init(const FString& NodeName, const rclcpp::NodeOptions& NodeOptions)
+{
+	Node = FNodeFactory::GetInstance()->MakeNode(NodeName, rclcpp::NodeOptions());
+}
+
+void UTempoROSNode::Tick(float DeltaTime) const
 {
 	rclcpp::spin_some(Node);
+}
+
+TSet<FString> UTempoROSNode::GetPublishedTopics() const
+{
+	TSet<FString> Topics;
+	Publishers.GetKeys(Topics);
+	return Topics;
+}
+
+bool UTempoROSNode::RemovePublisher(const FString& Topic)
+{
+	if (Publishers.Contains(Topic))
+	{
+		UE_LOG(LogTempoROS, Error, TEXT("Node did not have publisher for Topic %s"), *Topic);
+		return false;
+	}
+	Publishers.Remove(Topic);
+	return true;
 }

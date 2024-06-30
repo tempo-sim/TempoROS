@@ -16,7 +16,16 @@ class TEMPOROS_API UTempoROSNode: public UObject
 {
 	GENERATED_BODY()
 public:
-	UTempoROSNode();
+	UTempoROSNode() = default;
+
+	static UTempoROSNode* Create(const FString& NodeName,
+								 UObject* Outer=GetTransientPackage(),
+							     UWorld* TickWithWorld=nullptr,
+							     const rclcpp::NodeOptions& NodeOptions=rclcpp::NodeOptions());
+
+	const TMap<FString, FTempoROSPublisher>& GetPublishers() const { return Publishers; }
+
+	TSet<FString> GetPublishedTopics() const;
 	
 	template <typename MessageType>
 	bool AddPublisher(const FString& Topic)
@@ -29,6 +38,8 @@ public:
 		Publishers.Add(Topic, TTempoROSPublisher<MessageType>(Node, Topic));
 		return true;
 	}
+
+	bool RemovePublisher(const FString& Topic);
 
 	template <typename MessageType>
 	bool AddSubscription(const FString& Topic, const TROSSubscriptionDelegate<MessageType>& Callback)
@@ -62,9 +73,11 @@ public:
 		return false;
 	}
 
-	void Tick() const;
+	void Tick(float DeltaTime) const;
 
 private:
+	void Init(const FString& NodeName, const rclcpp::NodeOptions& NodeOptions);
+	
 	TMap<FString, FTempoROSPublisher> Publishers;
 	TMap<FString, TArray<FTempoROSSubscription>> Subscriptions;
 	TMap<FString, FTempoROSService> Services;
