@@ -12,7 +12,6 @@ using TROSSubscriptionDelegate = TDelegate<void(const MessageType&)>;
 struct FTempoROSSubscription
 {
 	virtual ~FTempoROSSubscription() = default;
-	virtual FName GetMessageType() const { return FName(NAME_None); }
 };
 
 template <typename MessageType>
@@ -25,22 +24,7 @@ struct TEMPOROS_API TTempoROSSubscription : FTempoROSSubscription
 		{
 			Callback.ExecuteIfBound(TFromROSConverter<MessageType>::Convert(Message));
 		})) {}
-
-	virtual FName GetMessageType() const override
-	{
-		return TMessageTypeTraits<MessageType>::MessageTypeDescriptor;
-	}
 	
 private:
 	std::shared_ptr<rclcpp::Subscription<ROSMessageType>> Subscription;
 };
-
-template <typename MessageType>
-static TTempoROSSubscription<MessageType>* Cast(FTempoROSSubscription* Subscription)
-{
-	if (Subscription->GetMessageType() == TMessageTypeTraits<MessageType>::MessageTypeDescriptor)
-	{
-		return StaticCast<TTempoROSSubscription<MessageType>*>(Subscription);
-	}
-	return nullptr;
-}

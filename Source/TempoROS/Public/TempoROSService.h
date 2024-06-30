@@ -12,8 +12,6 @@ using TROSServiceDelegate = TDelegate<typename ServiceType::Response(const typen
 struct FTempoROSService
 {
 	virtual ~FTempoROSService() = default;
-	virtual FName GetRequestType() const { return FName(NAME_None); }
-	virtual FName GetResponseType() const { return FName(NAME_None); }
 };
 
 template <typename ServiceType>
@@ -37,16 +35,6 @@ struct TEMPOROS_API TTempoROSService : FTempoROSService
 				*Response.get() = TToROSConverter<ResponseType>::Convert(Callback.Execute(TFromROSConverter<RequestType>::Convert(*Request.get())));
 			}
 		})) {}
-
-	virtual FName GetRequestType() const override
-	{
-		return TMessageTypeTraits<RequestType>::MessageTypeDescriptor;
-	}
-
-	virtual FName GetResponseType() const override
-	{
-		return TMessageTypeTraits<ResponseType>::MessageTypeDescriptor;
-	}
 	
 private:
 	std::shared_ptr<rclcpp::Service<ROSServiceType>> Service;
