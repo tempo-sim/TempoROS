@@ -21,14 +21,14 @@ struct FTempoROSPublisher
 template <typename MessageType>
 struct TTempoROSPublisher : FTempoROSPublisher
 {
-	using ROSMessageType = typename TToROSConverter<MessageType>::ToType;
+	using ROSMessageType = typename TImplicitToROSConverter<MessageType>::ToType;
 	
 	TTempoROSPublisher(const std::shared_ptr<rclcpp::Node>& Node, const FString& Topic)
 		: Publisher(Node->create_publisher<ROSMessageType>(TCHAR_TO_UTF8(*PrependNodeName(Node, Topic)), 0)) {}
 	
 	void Publish(const MessageType& Message) const
 	{
-		Publisher->publish(TToROSConverter<MessageType>::Convert(Message));
+		Publisher->publish(TImplicitToROSConverter<MessageType>::Convert(Message));
 	}
 	
 	virtual FName GetMessageType() const override

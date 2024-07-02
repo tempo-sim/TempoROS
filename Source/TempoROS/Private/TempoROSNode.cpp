@@ -17,7 +17,7 @@ public:
 		return std::make_shared<rclcpp::Node>(TCHAR_TO_UTF8(*Name), Options);
 	}
 
-	static FNodeFactory* GetInstance() { return Instance; }
+	static FNodeFactory& GetInstance() { return Instance; }
 
 private:
 	void Initialize()
@@ -28,10 +28,10 @@ private:
 	
 	bool bInitialized = false;
 
-	static FNodeFactory* Instance;
+	static FNodeFactory Instance;
 };
 
-FNodeFactory* FNodeFactory::Instance;
+FNodeFactory FNodeFactory::Instance;
 
 UTempoROSNode* UTempoROSNode::Create(const FString& NodeName, UObject* Outer, UWorld* TickWithWorld, const rclcpp::NodeOptions& NodeOptions)
 {
@@ -48,7 +48,8 @@ UTempoROSNode* UTempoROSNode::Create(const FString& NodeName, UObject* Outer, UW
 
 void UTempoROSNode::Init(const FString& NodeName, const rclcpp::NodeOptions& NodeOptions)
 {
-	Node = FNodeFactory::GetInstance()->MakeNode(NodeName, rclcpp::NodeOptions());
+	UE_LOG(LogTemp, Warning, TEXT("Making Node %s"), *NodeName);
+	Node = FNodeFactory::GetInstance().MakeNode(NodeName, rclcpp::NodeOptions());
 }
 
 void UTempoROSNode::Tick(float DeltaTime) const
@@ -65,7 +66,7 @@ TSet<FString> UTempoROSNode::GetPublishedTopics() const
 
 bool UTempoROSNode::RemovePublisher(const FString& Topic)
 {
-	if (Publishers.Contains(Topic))
+	if (!Publishers.Contains(Topic))
 	{
 		UE_LOG(LogTempoROS, Error, TEXT("Node did not have publisher for Topic %s"), *Topic);
 		return false;

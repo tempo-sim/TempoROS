@@ -17,6 +17,10 @@ class TEMPOROS_API UTempoROSNode: public UObject
 	GENERATED_BODY()
 public:
 	UTempoROSNode() = default;
+	virtual ~UTempoROSNode() override
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Destroying Node %s"), UTF8_TO_TCHAR(Node->get_name()));
+	}
 
 	static UTempoROSNode* Create(const FString& NodeName,
 								 UObject* Outer=GetTransientPackage(),
