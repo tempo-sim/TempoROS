@@ -67,3 +67,6 @@ Saved/*
 
 # pycache folders
 __pycache__
+
+# Generated TempoROS BP files
+*TempoROSBlueprintFunctionLibrary.h

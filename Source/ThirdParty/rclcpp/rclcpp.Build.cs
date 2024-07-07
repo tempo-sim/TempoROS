@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using UnrealBuildTool;
 
 public class rclcpp : ModuleRules
@@ -11,23 +12,26 @@ public class rclcpp : ModuleRules
     {
         public readonly string[] HeaderPaths;
         public readonly string[] LibraryPaths;
+        public readonly string[] GeneratedLibraryPaths;
 
-        public ModuleDepPaths(string[] headerPaths, string[] libraryPaths)
+        public ModuleDepPaths(string[] headerPaths, string[] libraryPaths, string[] generatedLibraryPaths)
         {
             HeaderPaths = headerPaths;
             LibraryPaths = libraryPaths;
+            GeneratedLibraryPaths = generatedLibraryPaths;
         }
     }
 
     private IEnumerable<string> FindFilesInDirectory(string dir, string suffix = "")
     {
-        return Directory.EnumerateFiles(dir, "*." + suffix, SearchOption.AllDirectories);
+        return Directory.EnumerateFiles(dir, "*." + suffix, SearchOption.AllDirectories).Where(file => !Path.GetDirectoryName(file).Contains("Python3.framework"));
     }
 
     public ModuleDepPaths GatherDeps()
     {
         List<string> HeaderPaths = new List<string>();
         List<string> LibraryPaths = new List<string>();
+        List<string> GeneratedLibraryPaths = new List<string>();
         
         HeaderPaths.Add(Path.Combine(ModuleDirectory, "Includes"));
 
@@ -38,6 +42,7 @@ public class rclcpp : ModuleRules
         else if (Target.Platform == UnrealTargetPlatform.Mac)
         {
             LibraryPaths.AddRange(FindFilesInDirectory(Path.Combine(ModuleDirectory, "Libraries", "Mac"), "dylib"));
+            // GeneratedLibraryPaths.AddRange(FindFilesInDirectory(Path.Combine(ModuleDirectory, "Generated"), "dylib"));
         }
         else if (Target.Platform == UnrealTargetPlatform.Linux)
         {
@@ -48,7 +53,7 @@ public class rclcpp : ModuleRules
             Console.WriteLine("Unsupported target platform for module rclcpp.");
         }
 
-        return new ModuleDepPaths(HeaderPaths.ToArray(), LibraryPaths.ToArray());
+        return new ModuleDepPaths(HeaderPaths.ToArray(), LibraryPaths.ToArray(), GeneratedLibraryPaths.ToArray());
     }
     
     public rclcpp(ReadOnlyTargetRules Target) : base(Target)
@@ -64,12 +69,21 @@ public class rclcpp : ModuleRules
         {
             RuntimeDependencies.Add(libraryPath);
         }
+        // PublicDelayLoadDLLs.AddRange(moduleDepPaths.GeneratedLibraryPaths);
+        // PublicRuntimeLibraryPaths.Add(Path.Combine(ModuleDirectory, "Generated"));
+        // foreach (string libraryPath in moduleDepPaths.GeneratedLibraryPaths)
+        // {
+        //     RuntimeDependencies.Add(libraryPath);
+        // }
+        
+        PrivateDependencyModuleNames.AddRange(
+            new string[]
+            {
+                "Core"
+            }
+            );
         
         PublicDefinitions.Add("__STDC_VERSION__=202002L");
         PublicDefinitions.Add("RCLCPP_INTRA_PROCESS_DISABLED=1");
-        
-        Environment.SetEnvironmentVariable("AMENT_PREFIX_PATH", Path.Combine(ModuleDirectory, "Libraries", "Mac"));
-        Environment.SetEnvironmentVariable("DYLIB_LIBRARY_PATH", Path.Combine(ModuleDirectory, "Libraries", "Mac"));
-        Environment.SetEnvironmentVariable("RMW_IMPLEMENTATION", "rmw_cyclonedds_cpp");
     }
 }

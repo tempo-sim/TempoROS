@@ -28,5 +28,10 @@ public class TempoROS : ModuleRules
 				"SlateCore",
 			}
 			);
+		
+		if (Target.bBuildEditor)
+		{
+			PrivateDependencyModuleNames.Add("HotReload");
+		}
 	}
 }

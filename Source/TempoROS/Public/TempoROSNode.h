@@ -12,79 +12,86 @@
 #include "TempoROSNode.generated.h"
 
 UCLASS(BlueprintType)
+class TEMPOROS_API UTempoROSNodeBlueprintFunctionLibrary : public UBlueprintFunctionLibrary
+{
+	GENERATED_BODY()
+
+	UFUNCTION(BlueprintCallable, meta=(WorldContext="Owner"))
+	static UTempoROSNode* CreateTempoROSNode(const FString& NodeName, UObject* Owner, bool bAutoTick=true);
+};
+
+UCLASS(BlueprintType)
 class TEMPOROS_API UTempoROSNode: public UObject
 {
 	GENERATED_BODY()
 public:
 	UTempoROSNode() = default;
-	virtual ~UTempoROSNode() override
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Destroying Node %s"), UTF8_TO_TCHAR(Node->get_name()));
-	}
 
 	static UTempoROSNode* Create(const FString& NodeName,
 								 UObject* Outer=GetTransientPackage(),
-							     UWorld* TickWithWorld=nullptr,
+							     bool bAutoTick=true,
 							     const rclcpp::NodeOptions& NodeOptions=rclcpp::NodeOptions());
 
-	const TMap<FString, FTempoROSPublisher>& GetPublishers() const { return Publishers; }
+	const TMap<FString, TUniquePtr<FTempoROSPublisher>>& GetPublishers() const { return Publishers; }
 
+	UFUNCTION(BlueprintCallable)
 	TSet<FString> GetPublishedTopics() const;
 	
 	template <typename MessageType>
-	bool AddPublisher(const FString& Topic)
+	void AddPublisher(const FString& Topic)
 	{
 		if (Publishers.Contains(Topic))
 		{
 			UE_LOG(LogTempoROS, Error, TEXT("Node already has publisher for topic %s"), *Topic);
-			return false;
+			return;
 		}
-		Publishers.Add(Topic, TTempoROSPublisher<MessageType>(Node, Topic));
-		return true;
+		Publishers.Emplace(Topic, MakeUnique<TTempoROSPublisher<MessageType>>(Node, Topic));
 	}
 
-	bool RemovePublisher(const FString& Topic);
+	UFUNCTION(BlueprintCallable)
+	void RemovePublisher(const FString& Topic);
 
 	template <typename MessageType>
-	bool AddSubscription(const FString& Topic, const TROSSubscriptionDelegate<MessageType>& Callback)
+	void Publish(const FString& Topic, const MessageType& Message)
 	{
-		Subscriptions.FindOrAdd(Topic).Add(TTempoROSSubscription<MessageType>(Node, Topic, Callback));
-		return true;
+		const TUniquePtr<FTempoROSPublisher>& Publisher = Publishers.FindOrAdd(Topic, MakeUnique<TTempoROSPublisher<MessageType>>(Node, Topic));
+		if (const TTempoROSPublisher<MessageType>* TypedPublisher = Cast<MessageType>(Publisher.Get()))
+		{
+			TypedPublisher->Publish(Message);
+			return;
+		}
+		UE_LOG(LogTempoROS, Error, TEXT("Publisher for topic %s did not have correct type"), *Topic);
+	}
+	
+	template <typename MessageType>
+	void AddSubscription(const FString& Topic, const TROSSubscriptionDelegate<MessageType>& Callback)
+	{
+		Subscriptions.FindOrAdd(Topic).Emplace(MakeUnique<TTempoROSSubscription<MessageType>>(Node, Topic, Callback));
 	}
 
+	UFUNCTION(BlueprintCallable)
+	void RemoveSubscriptions(const FString& Topic);
+
 	template <typename ServiceType>
-	bool AddService(const FString& Name, const TROSServiceDelegate<ServiceType>& Callback)
+	void AddService(const FString& Name, const TROSServiceDelegate<ServiceType>& Callback)
 	{
 		if (Services.Contains(Name))
 		{
 			UE_LOG(LogTempoROS, Error, TEXT("Node %s already has service with name %s"), *Name);
-			return false;
+			return;
 		}
-		Services.Add(Name, TTempoROSService<ServiceType>(Node, Name, Callback));
-		return true;
+		Services.Emplace(Name, MakeUnique<TTempoROSService<ServiceType>>(Node, Name, Callback));
 	}
 
-	template <typename MessageType>
-	bool Publish(const FString& Topic, const MessageType& Message)
-	{
-		FTempoROSPublisher& Publisher = Publishers.FindOrAdd(Topic, TTempoROSPublisher<MessageType>(Node, Topic));
-		if (const TTempoROSPublisher<MessageType>* TypedPublisher = Cast<MessageType>(&Publisher))
-		{
-			TypedPublisher->Publish(Message);
-			return true;
-		}
-		UE_LOG(LogTempoROS, Error, TEXT("Publisher for topic %s did not have correct type"), *Topic);
-		return false;
-	}
-
+	UFUNCTION(BlueprintCallable)
 	void Tick(float DeltaTime) const;
 
 private:
-	void Init(const FString& NodeName, const rclcpp::NodeOptions& NodeOptions);
-	
-	TMap<FString, FTempoROSPublisher> Publishers;
-	TMap<FString, TArray<FTempoROSSubscription>> Subscriptions;
-	TMap<FString, FTempoROSService> Services;
-	
+	void Init(const FString& NodeName, const rclcpp::NodeOptions& NodeOptions, UWorld* TickWithWorld);
+
+	TMap<FString, TUniquePtr<FTempoROSPublisher>> Publishers;
+	TMap<FString, TArray<TUniquePtr<FTempoROSSubscription>>> Subscriptions;
+	TMap<FString, TUniquePtr<FTempoROSService>> Services;
+
 	std::shared_ptr<rclcpp::Node> Node = nullptr;
 };
