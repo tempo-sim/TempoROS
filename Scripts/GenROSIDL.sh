@@ -395,7 +395,7 @@ GET_MODULE_INCLUDES() {
     if [ -d "$SRC_TEMP_DIR/$PUBLIC_DEPENDENCY" ]; then # Only consider project modules
       if [ -d "$INCLUDES_DIR/$PUBLIC_DEPENDENCY" ]; then
         # We already have this dependency - but still add its public dependencies.
-        GET_MODULE_INCLUDES_PUBLIC_ONLY "$PUBLIC_DEPENDENCY" "$INCLUDES"
+        GET_MODULE_INCLUDES_PUBLIC_ONLY "$PUBLIC_DEPENDENCY" "$INCLUDES_DIR"
       else
         # This is a new dependency - add its public ROS IDL files and those of its public dependencies.
         mkdir -p "$INCLUDES_DIR/$PUBLIC_DEPENDENCY"
@@ -410,7 +410,7 @@ GET_MODULE_INCLUDES() {
     if [[ -d "$SRC_TEMP_DIR/$PRIVATE_DEPENDENCY" ]]; then # Only consider project modules
       if [[ -d "$INCLUDES_DIR/$PRIVATE_DEPENDENCY" ]]; then
         # We already have this dependency - but still add its public dependencies.
-        GET_MODULE_INCLUDES_PUBLIC_ONLY "$MODULE_NAME" "$INCLUDES"
+        GET_MODULE_INCLUDES_PUBLIC_ONLY "$MODULE_NAME" "$INCLUDES_DIR"
       else
         # This is a new dependency - add its public ROS IDL files and those of its public dependencies.
         mkdir -p "$INCLUDES_DIR/$PRIVATE_DEPENDENCY"
