@@ -77,7 +77,7 @@ public:
 	{
 		if (Services.Contains(Name))
 		{
-			UE_LOG(LogTempoROS, Error, TEXT("Node %s already has service with name %s"), *Name);
+			UE_LOG(LogTempoROS, Error, TEXT("Node already has service with name %s"), *Name);
 			return;
 		}
 		Services.Emplace(Name, MakeUnique<TTempoROSService<ServiceType>>(Node, Name, Callback));
