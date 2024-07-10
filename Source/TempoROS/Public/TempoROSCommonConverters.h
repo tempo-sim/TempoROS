@@ -4,7 +4,7 @@
 
 #include "TempoROSConversion.h"
 
-#include "std_msgs/msg/String.hpp"
+#include "std_msgs/msg/string.hpp"
 #include "geometry_msgs/msg/transform.hpp"
 
 DEFINE_TEMPOROS_MESSAGE_TYPE_TRAITS(FString)

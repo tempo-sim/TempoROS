@@ -12,13 +12,13 @@ public class rclcpp : ModuleRules
     {
         public readonly string[] HeaderPaths;
         public readonly string[] LibraryPaths;
-        public readonly string[] GeneratedLibraryPaths;
+        public readonly string[] RuntimeLibraryPaths;
 
-        public ModuleDepPaths(string[] headerPaths, string[] libraryPaths, string[] generatedLibraryPaths)
+        public ModuleDepPaths(string[] headerPaths, string[] libraryPaths, string[] runtimeLibraryPaths)
         {
             HeaderPaths = headerPaths;
             LibraryPaths = libraryPaths;
-            GeneratedLibraryPaths = generatedLibraryPaths;
+            RuntimeLibraryPaths = runtimeLibraryPaths;
         }
     }
 
@@ -31,7 +31,7 @@ public class rclcpp : ModuleRules
     {
         List<string> HeaderPaths = new List<string>();
         List<string> LibraryPaths = new List<string>();
-        List<string> GeneratedLibraryPaths = new List<string>();
+        List<string> RuntimeLibraryPaths = new List<string>();
         
         HeaderPaths.Add(Path.Combine(ModuleDirectory, "Includes"));
 
@@ -42,18 +42,19 @@ public class rclcpp : ModuleRules
         else if (Target.Platform == UnrealTargetPlatform.Mac)
         {
             LibraryPaths.AddRange(FindFilesInDirectory(Path.Combine(ModuleDirectory, "Libraries", "Mac"), "dylib"));
-            // GeneratedLibraryPaths.AddRange(FindFilesInDirectory(Path.Combine(ModuleDirectory, "Generated"), "dylib"));
+            RuntimeLibraryPaths.AddRange(FindFilesInDirectory(Path.Combine(ModuleDirectory, "Libraries", "Mac"), "dylib"));
         }
         else if (Target.Platform == UnrealTargetPlatform.Linux)
         {
             LibraryPaths.AddRange(FindFilesInDirectory(Path.Combine(ModuleDirectory, "Libraries", "Linux"), "so"));
+            RuntimeLibraryPaths.AddRange(FindFilesInDirectory(Path.Combine(ModuleDirectory, "Libraries", "Linux"), "so*"));
         }
         else
         {
             Console.WriteLine("Unsupported target platform for module rclcpp.");
         }
 
-        return new ModuleDepPaths(HeaderPaths.ToArray(), LibraryPaths.ToArray(), GeneratedLibraryPaths.ToArray());
+        return new ModuleDepPaths(HeaderPaths.ToArray(), LibraryPaths.ToArray(), RuntimeLibraryPaths.ToArray());
     }
     
     public rclcpp(ReadOnlyTargetRules Target) : base(Target)
@@ -65,7 +66,7 @@ public class rclcpp : ModuleRules
         ModuleDepPaths moduleDepPaths = GatherDeps();
         PublicIncludePaths.AddRange(moduleDepPaths.HeaderPaths);
         PublicAdditionalLibraries.AddRange(moduleDepPaths.LibraryPaths);
-        foreach (string libraryPath in moduleDepPaths.LibraryPaths)
+        foreach (string libraryPath in moduleDepPaths.RuntimeLibraryPaths)
         {
             RuntimeDependencies.Add(libraryPath);
         }
@@ -83,7 +84,10 @@ public class rclcpp : ModuleRules
             }
             );
         
+        PublicDefinitions.Add("_LIBCPP_HAS_NO_RTTI=1");
         PublicDefinitions.Add("__STDC_VERSION__=202002L");
         PublicDefinitions.Add("RCLCPP_INTRA_PROCESS_DISABLED=1");
+
+        bEnableExceptions = true;
     }
 }

@@ -24,7 +24,7 @@ struct TTempoROSPublisher : FTempoROSPublisher
 	using ROSMessageType = typename TImplicitToROSConverter<MessageType>::ToType;
 	
 	TTempoROSPublisher(const std::shared_ptr<rclcpp::Node>& Node, const FString& Topic)
-		: Publisher(Node->create_publisher<ROSMessageType>(TCHAR_TO_UTF8(*PrependNodeName(Node, Topic)), 0)) {}
+		: Publisher(Node->create_publisher<ROSMessageType>(TCHAR_TO_UTF8(*PrependNodeName(Node, Topic)), 10)) {}
 	
 	void Publish(const MessageType& Message) const
 	{
