@@ -5,6 +5,15 @@
 #include "TempoROSConversion.h"
 
 #include "rclcpp.h"
+#include "image_transport/image_transport.hpp"
+#include "sensor_msgs/msg/Image.hpp"
+
+struct IPublisherSupportInterface
+{
+	virtual ~IPublisherSupportInterface() = default;
+	virtual const std::shared_ptr<rclcpp::Node>& GetNode() const = 0;
+	virtual const std::unique_ptr<image_transport::ImageTransport>& GetImageTransport() const = 0;
+};
 
 static FString PrependNodeName(const std::shared_ptr<rclcpp::Node>& Node, const FString& Topic)
 {
@@ -18,13 +27,16 @@ struct FTempoROSPublisher
 	virtual bool HasSubscriptions() const { return false; }
 };
 
+template<typename MessageType>
+concept ImageConvertible = std::is_same_v<typename TImplicitToROSConverter<MessageType>::ToType, sensor_msgs::msg::Image>;
+
 template <typename MessageType>
 struct TTempoROSPublisher : FTempoROSPublisher
 {
 	using ROSMessageType = typename TImplicitToROSConverter<MessageType>::ToType;
 	
-	TTempoROSPublisher(const std::shared_ptr<rclcpp::Node>& Node, const FString& Topic)
-		: Publisher(Node->create_publisher<ROSMessageType>(TCHAR_TO_UTF8(*PrependNodeName(Node, Topic)), 10)) {}
+	TTempoROSPublisher(const IPublisherSupportInterface* PublisherSupport, const FString& Topic)
+		: Publisher(PublisherSupport->GetNode()->create_publisher<ROSMessageType>(TCHAR_TO_UTF8(*PrependNodeName(PublisherSupport->GetNode(), Topic)), 0)) {}
 	
 	void Publish(const MessageType& Message) const
 	{
@@ -43,6 +55,31 @@ struct TTempoROSPublisher : FTempoROSPublisher
 
 private:
 	std::shared_ptr<rclcpp::Publisher<ROSMessageType>> Publisher;
+};
+
+template <ImageConvertible MessageType>
+struct TTempoROSPublisher<MessageType> : FTempoROSPublisher
+{
+	TTempoROSPublisher(const IPublisherSupportInterface* PublisherSupport, const FString& Topic)
+		: Publisher(PublisherSupport->GetImageTransport()->advertise(TCHAR_TO_UTF8(*PrependNodeName(PublisherSupport->GetNode(), Topic)), 0)) {}
+	
+	void Publish(const MessageType& Message) const
+	{
+		Publisher.publish(TImplicitToROSConverter<MessageType>::Convert(Message));
+	}
+	
+	virtual FName GetMessageType() const override
+	{
+		return TMessageTypeTraits<MessageType>::MessageTypeDescriptor;
+	}
+
+	virtual bool HasSubscriptions() const override
+	{
+		return Publisher.getNumSubscribers() > 0;
+	}
+
+private:
+	image_transport::Publisher Publisher;
 };
 
 template <typename MessageType>

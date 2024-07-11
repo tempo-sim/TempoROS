@@ -8,6 +8,7 @@
 #include "TempoROSSubscription.h"
 
 #include "rclcpp.h"
+#include "image_transport/image_transport.hpp"
 
 #include "TempoROSNode.generated.h"
 
@@ -21,7 +22,7 @@ class TEMPOROS_API UTempoROSNodeBlueprintFunctionLibrary : public UBlueprintFunc
 };
 
 UCLASS(BlueprintType)
-class TEMPOROS_API UTempoROSNode: public UObject
+class TEMPOROS_API UTempoROSNode: public UObject, public IPublisherSupportInterface
 {
 	GENERATED_BODY()
 public:
@@ -45,7 +46,7 @@ public:
 			UE_LOG(LogTempoROS, Error, TEXT("Node already has publisher for topic %s"), *Topic);
 			return;
 		}
-		Publishers.Emplace(Topic, MakeUnique<TTempoROSPublisher<MessageType>>(Node, Topic));
+		Publishers.Emplace(Topic, MakeUnique<TTempoROSPublisher<MessageType>>(this, Topic));
 	}
 
 	UFUNCTION(BlueprintCallable)
@@ -54,13 +55,8 @@ public:
 	template <typename MessageType>
 	void Publish(const FString& Topic, const MessageType& Message)
 	{
-		const TUniquePtr<FTempoROSPublisher>& Publisher = Publishers.FindOrAdd(Topic, MakeUnique<TTempoROSPublisher<MessageType>>(Node, Topic));
-		if (const TTempoROSPublisher<MessageType>* TypedPublisher = Cast<MessageType>(Publisher.Get()))
-		{
-			TypedPublisher->Publish(Message);
-			return;
-		}
-		UE_LOG(LogTempoROS, Error, TEXT("Publisher for topic %s did not have correct type"), *Topic);
+		const TUniquePtr<FTempoROSPublisher>& Publisher = Publishers.FindOrAdd(Topic, MakeUnique<TTempoROSPublisher<MessageType>>(this, Topic));
+		PublishInternal<MessageType>(Topic, Message);
 	}
 	
 	template <typename MessageType>
@@ -86,12 +82,28 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void Tick(float DeltaTime) const;
 
+	virtual const std::shared_ptr<rclcpp::Node>& GetNode() const override { return Node; }
+	virtual const std::unique_ptr<image_transport::ImageTransport>& GetImageTransport() const override { return ImageTransport; }
+
 private:
 	void Init(const FString& NodeName, const rclcpp::NodeOptions& NodeOptions, UWorld* TickWithWorld);
 
+	template <typename MessageType>
+	void PublishInternal(const FString& Topic, const MessageType& Message)
+	{
+		if (const TTempoROSPublisher<MessageType>* TypedPublisher = Cast<MessageType>(Publishers[Topic].Get()))
+		{
+			TypedPublisher->Publish(Message);
+			return;
+		}
+		UE_LOG(LogTempoROS, Error, TEXT("Publisher for topic %s did not have correct type"), *Topic);
+	}
+
 	TMap<FString, TUniquePtr<FTempoROSPublisher>> Publishers;
+	TMap<FString, image_transport::Publisher> ImagePublishers;
 	TMap<FString, TArray<TUniquePtr<FTempoROSSubscription>>> Subscriptions;
 	TMap<FString, TUniquePtr<FTempoROSService>> Services;
 
 	std::shared_ptr<rclcpp::Node> Node = nullptr;
+	std::unique_ptr<image_transport::ImageTransport> ImageTransport;
 };

@@ -28,8 +28,8 @@ UTempoROSNode* UTempoROSNode::Create(const FString& NodeName, UObject* Outer, bo
 
 void UTempoROSNode::Init(const FString& NodeName, const rclcpp::NodeOptions& NodeOptions, UWorld* TickWithWorld)
 {
-	Node = std::make_shared<rclcpp::Node>(TCHAR_TO_UTF8(*NodeName), rclcpp::NodeOptions());;
-	rclcpp::spin_some(Node);
+	Node = std::make_shared<rclcpp::Node>(TCHAR_TO_UTF8(*NodeName), rclcpp::NodeOptions());
+	ImageTransport = std::make_unique<image_transport::ImageTransport>(Node);
 	if (TickWithWorld)
 	{
 		// ROS has nothing to do with movie scene sequences, but this event fires in exactly the right conditions:
