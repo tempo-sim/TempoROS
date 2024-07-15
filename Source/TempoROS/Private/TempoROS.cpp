@@ -47,7 +47,7 @@ void SetEnvironmentVars()
 	FPlatformMisc::SetEnvironmentVar(TEXT("AMENT_PREFIX_PATH"), *LibDir);
 
 	// RMW_IMPLEMENTATION
-	FPlatformMisc::SetEnvironmentVar(TEXT("RMW_IMPLEMENTATION"), TEXT("rmw_cyclonedds_cpp"));
+	FPlatformMisc::SetEnvironmentVar(TEXT("RMW_IMPLEMENTATION"), TEXT("rmw_fastrtps_cpp"));
 }
 
 void FTempoROSModule::StartupModule()

@@ -145,7 +145,7 @@ GEN_MODULE_MSG_AND_SRVS() {
       FILE=$(cygpath -m "$FILE")
     fi
     RELATIVE_PATH="${FILE#./}"
-    GEN_COMMAND="$GENTOOL generate --type cpp --type-support cpp --type-support introspection_cpp $PACKAGE_NAME $SOURCE_DIR:$RELATIVE_PATH -o $MODULE_GEN_TEMP_DIR/$PACKAGE_NAME"
+    GEN_COMMAND="$GENTOOL generate --type cpp --type-support cpp --type-support introspection_cpp --type-support fastrtps_cpp $PACKAGE_NAME $SOURCE_DIR:$RELATIVE_PATH -o $MODULE_GEN_TEMP_DIR/$PACKAGE_NAME"
     for SUBDIR in "$INCLUDE_DIR"/*/ ; do
         if [ -d "$SUBDIR" ]; then
             GEN_COMMAND+=" -I $(realpath "$SUBDIR")"
@@ -164,11 +164,17 @@ GEN_MODULE_MSG_AND_SRVS() {
       local EXTENSION="msg"
     elif [[ "$RELATIVE_PATH" = "$PACKAGE_NAME/introspection_cpp/msg"* ]]; then
       local EXTENSION="msg"
+    elif [[ "$RELATIVE_PATH" = "$PACKAGE_NAME/fastrtps_cpp/msg"* ]]; then
+      local EXTENSION="msg"
     elif [[ "$RELATIVE_PATH" = "$PACKAGE_NAME/cpp/srv"* ]]; then
       local EXTENSION="srv"
     elif [[ "$RELATIVE_PATH" = "$PACKAGE_NAME/introspection_cpp/srv"* ]]; then
       local EXTENSION="srv"
+    elif [[ "$RELATIVE_PATH" = "$PACKAGE_NAME/fastrtps_cpp/srv"* ]]; then
+      local EXTENSION="srv"
     elif [[ "$RELATIVE_PATH" = "$PACKAGE_NAME/cpp/tmp"* ]]; then
+      continue
+    elif [[ "$RELATIVE_PATH" = "$PACKAGE_NAME/fastrtps_cpp/tmp"* ]]; then
       continue
     elif [[ "$RELATIVE_PATH" = "$PACKAGE_NAME/introspection_cpp/tmp"* ]]; then
       continue
@@ -185,6 +191,7 @@ GEN_MODULE_MSG_AND_SRVS() {
     # Remove /cpp from RELATIVE_PATH
     RELATIVE_PATH=${RELATIVE_PATH//\/cpp/}
     RELATIVE_PATH=${RELATIVE_PATH//\/introspection_cpp/}
+    RELATIVE_PATH=${RELATIVE_PATH//\/fastrtps_cpp/}
     # If the original file was in Public, the generated files go in public
     if find "$MODULE_SRC_TEMP_DIR/Public" -name "$ORIGINAL_FILENAME" | grep -q .; then
       local POSSIBLY_STALE_FILE="$PUBLIC_DEST_DIR/$RELATIVE_PATH"

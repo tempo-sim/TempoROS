@@ -6,7 +6,7 @@
 
 #include "rclcpp.h"
 #include "image_transport/image_transport.hpp"
-#include "sensor_msgs/msg/Image.hpp"
+#include "sensor_msgs/msg/image.hpp"
 
 struct IPublisherSupportInterface
 {
@@ -14,11 +14,6 @@ struct IPublisherSupportInterface
 	virtual const std::shared_ptr<rclcpp::Node>& GetNode() const = 0;
 	virtual const std::unique_ptr<image_transport::ImageTransport>& GetImageTransport() const = 0;
 };
-
-static FString PrependNodeName(const std::shared_ptr<rclcpp::Node>& Node, const FString& Topic)
-{
-	return FString::Printf(TEXT("%s/%s"), UTF8_TO_TCHAR(Node->get_name()), *Topic);
-}
 
 struct FTempoROSPublisher
 {
@@ -36,7 +31,7 @@ struct TTempoROSPublisher : FTempoROSPublisher
 	using ROSMessageType = typename TImplicitToROSConverter<MessageType>::ToType;
 	
 	TTempoROSPublisher(const IPublisherSupportInterface* PublisherSupport, const FString& Topic)
-		: Publisher(PublisherSupport->GetNode()->create_publisher<ROSMessageType>(TCHAR_TO_UTF8(*PrependNodeName(PublisherSupport->GetNode(), Topic)), 0)) {}
+		: Publisher(PublisherSupport->GetNode()->create_publisher<ROSMessageType>(TCHAR_TO_UTF8(*Topic), rclcpp::QoS(10).reliable().transient_local())) {}
 	
 	void Publish(const MessageType& Message) const
 	{
@@ -61,7 +56,10 @@ template <ImageConvertible MessageType>
 struct TTempoROSPublisher<MessageType> : FTempoROSPublisher
 {
 	TTempoROSPublisher(const IPublisherSupportInterface* PublisherSupport, const FString& Topic)
-		: Publisher(PublisherSupport->GetImageTransport()->advertise(TCHAR_TO_UTF8(*PrependNodeName(PublisherSupport->GetNode(), Topic)), 0)) {}
+		: Publisher(PublisherSupport->GetImageTransport()->advertise(TCHAR_TO_UTF8(*Topic), 10))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Making ImageConvertible publisher for %s"), *Topic);
+	}
 	
 	void Publish(const MessageType& Message) const
 	{

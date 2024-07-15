@@ -46,6 +46,7 @@ public:
 			UE_LOG(LogTempoROS, Error, TEXT("Node already has publisher for topic %s"), *Topic);
 			return;
 		}
+		UE_LOG(LogTemp, Warning, TEXT("Adding publisher for %s"), *Topic);
 		Publishers.Emplace(Topic, MakeUnique<TTempoROSPublisher<MessageType>>(this, Topic));
 	}
 
@@ -53,10 +54,19 @@ public:
 	void RemovePublisher(const FString& Topic);
 
 	template <typename MessageType>
-	void Publish(const FString& Topic, const MessageType& Message)
+	void Publish(const FString& Topic, const MessageType& Message, bool bLatched=false)
 	{
-		const TUniquePtr<FTempoROSPublisher>& Publisher = Publishers.FindOrAdd(Topic, MakeUnique<TTempoROSPublisher<MessageType>>(this, Topic));
-		PublishInternal<MessageType>(Topic, Message);
+		TUniquePtr<FTempoROSPublisher>* PublisherPtr = Publishers.Find(Topic);
+		if (!PublisherPtr)
+		{
+			PublisherPtr = &Publishers.Emplace(Topic, MakeUnique<TTempoROSPublisher<MessageType>>(this, Topic));
+		}
+		if (const TTempoROSPublisher<MessageType>* TypedPublisher = Cast<MessageType>(PublisherPtr->Get()))
+		{
+			TypedPublisher->Publish(Message);
+			return;
+		}
+		UE_LOG(LogTempoROS, Error, TEXT("Publisher for topic %s did not have correct type"), *Topic);
 	}
 	
 	template <typename MessageType>
@@ -88,19 +98,7 @@ public:
 private:
 	void Init(const FString& NodeName, const rclcpp::NodeOptions& NodeOptions, UWorld* TickWithWorld);
 
-	template <typename MessageType>
-	void PublishInternal(const FString& Topic, const MessageType& Message)
-	{
-		if (const TTempoROSPublisher<MessageType>* TypedPublisher = Cast<MessageType>(Publishers[Topic].Get()))
-		{
-			TypedPublisher->Publish(Message);
-			return;
-		}
-		UE_LOG(LogTempoROS, Error, TEXT("Publisher for topic %s did not have correct type"), *Topic);
-	}
-
 	TMap<FString, TUniquePtr<FTempoROSPublisher>> Publishers;
-	TMap<FString, image_transport::Publisher> ImagePublishers;
 	TMap<FString, TArray<TUniquePtr<FTempoROSSubscription>>> Subscriptions;
 	TMap<FString, TUniquePtr<FTempoROSService>> Services;
 

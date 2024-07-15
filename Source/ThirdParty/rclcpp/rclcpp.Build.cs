@@ -47,7 +47,7 @@ public class rclcpp : ModuleRules
         else if (Target.Platform == UnrealTargetPlatform.Linux)
         {
             LibraryPaths.AddRange(FindFilesInDirectory(Path.Combine(ModuleDirectory, "Libraries", "Linux"), "so"));
-            RuntimeLibraryPaths.AddRange(FindFilesInDirectory(Path.Combine(ModuleDirectory, "Libraries", "Linux"), "so*"));
+            // RuntimeLibraryPaths.AddRange(FindFilesInDirectory(Path.Combine(ModuleDirectory, "Libraries", "Linux"), "so*"));
         }
         else
         {
@@ -85,7 +85,6 @@ public class rclcpp : ModuleRules
             );
         
         PublicDefinitions.Add("_LIBCPP_HAS_NO_RTTI=1");
-        PublicDefinitions.Add("__STDC_VERSION__=202002L");
         PublicDefinitions.Add("RCLCPP_INTRA_PROCESS_DISABLED=1");
 
         bEnableExceptions = true;
