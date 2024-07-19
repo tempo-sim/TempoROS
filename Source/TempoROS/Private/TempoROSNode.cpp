@@ -4,7 +4,7 @@
 
 UTempoROSNode* UTempoROSNodeBlueprintFunctionLibrary::CreateTempoROSNode(const FString& NodeName, UObject* Owner, bool bAutoTick)
 {
-	return UTempoROSNode::Create(NodeName, Owner, bAutoTick, rclcpp::NodeOptions());
+	return UTempoROSNode::Create(NodeName, Owner, bAutoTick);
 }
 
 UTempoROSNode* UTempoROSNode::Create(const FString& NodeName, UObject* Outer, bool bAutoTick, const rclcpp::NodeOptions& NodeOptions)
@@ -22,14 +22,25 @@ UTempoROSNode* UTempoROSNode::Create(const FString& NodeName, UObject* Outer, bo
 			UE_LOG(LogTempoROS, Error, TEXT("Unable to find world to auto tick TempoROS node %s"), *NodeName);
 		}
 	}
-	NewNode->Init(NodeName, NodeOptions, TickWithWorld);
+	try
+	{
+		NewNode->Init(NodeName, NodeOptions, TickWithWorld);
+	}
+	catch (const std::exception& Exception)
+	{
+		UE_LOG(LogTempoROS, Error, TEXT("Failed to initialize node. Error: %s"), UTF8_TO_TCHAR(Exception.what()));
+	}
 	return NewNode;
 }
 
 void UTempoROSNode::Init(const FString& NodeName, const rclcpp::NodeOptions& NodeOptions, UWorld* TickWithWorld)
 {
-	Node = std::make_shared<rclcpp::Node>(TCHAR_TO_UTF8(*NodeName), rclcpp::NodeOptions());
+	Node = std::make_shared<rclcpp::Node>(TCHAR_TO_UTF8(*NodeName), NodeOptions);
 	ImageTransport = std::make_unique<image_transport::ImageTransport>(Node);
+	StaticTFPublisher = MakeUnique<FTempoStaticTFPublisher>(Node);
+	DynamicTFPublisher = MakeUnique<FTempoDynamicTFPublisher>(Node);
+	TFListener = MakeUnique<FTempoTFListener>(Node);
+	
 	if (TickWithWorld)
 	{
 		// ROS has nothing to do with movie scene sequences, but this event fires in exactly the right conditions:

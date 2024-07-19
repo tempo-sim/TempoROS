@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Copyright Tempo Simulation, LLC. All Rights Reserved
 
 set -e
 
@@ -90,7 +91,7 @@ TYPESUPPORT_INCLUDE_TEMPLATE=\
 "
 
 TYPESUPPORT_SYMBOL_TEMPLATE=\
-"(void*)&rosidl_typesupport_introspection_cpp__get___SERVICE_OR_MESSAGE___type_support_handle____PACKAGE_NAME______SRV_OR_MSG______SERVICE_OR_MESSAGE_NAME__,
+"(void*)&rosidl_typesupport___TYPESUPPORT___cpp__get___SERVICE_OR_MESSAGE___type_support_handle____PACKAGE_NAME______SRV_OR_MSG______SERVICE_OR_MESSAGE_NAME__,
 "
 
 # Function to refresh stale files
@@ -238,7 +239,7 @@ GEN_MODULE_MSG_AND_SRVS() {
     FORCEEXPORT_CONTENTS="${FORCEEXPORT_CONTENTS//__PACKAGE_NAME__/$PACKAGE_NAME}"
     
     cd "$MODULE_PATH"
-    for FILE in $(find . -type f -name "*__rosidl_typesupport_introspection_cpp.hpp"); do
+    for FILE in $(find . -type f -name "*__rosidl_typesupport_*_cpp.hpp"); do
       RELATIVE_PATH="${FILE#./}"
       if [[ $RELATIVE_PATH == *"/srv/"* ]]; then
         SERVICE_OR_MESSAGE="service"
@@ -247,11 +248,15 @@ GEN_MODULE_MSG_AND_SRVS() {
         SERVICE_OR_MESSAGE="message"
         SRV_OR_MSG="msg"
       fi
-      local BASE_NAME=$(basename "$FILE")
+      local BASE_NAME
+      BASE_NAME=$(basename "$FILE")
+      local TYPESUPPORT=${BASE_NAME##*rosidl_typesupport_}
+      TYPESUPPORT=${TYPESUPPORT%%_*}
       SERVICE_OR_MESSAGE_NAME=$(SNAKE_TO_PASCAL "${BASE_NAME%%__*}")
       INCLUDE_CONTENT=${TYPESUPPORT_INCLUDE_TEMPLATE//__INCLUDEFILE__/${RELATIVE_PATH#*/}}
       FORCEEXPORT_CONTENTS=${FORCEEXPORT_CONTENTS//__INCLUDES__/$INCLUDE_CONTENT"__INCLUDES__"}
-      SYMBOL_CONTENT=${TYPESUPPORT_SYMBOL_TEMPLATE//__SERVICE_OR_MESSAGE__/$SERVICE_OR_MESSAGE}
+      SYMBOL_CONTENT=${TYPESUPPORT_SYMBOL_TEMPLATE//__TYPESUPPORT__/$TYPESUPPORT}
+      SYMBOL_CONTENT=${SYMBOL_CONTENT//__SERVICE_OR_MESSAGE__/$SERVICE_OR_MESSAGE}
       SYMBOL_CONTENT=${SYMBOL_CONTENT//__SRV_OR_MSG__/$SRV_OR_MSG}
       SYMBOL_CONTENT=${SYMBOL_CONTENT//__PACKAGE_NAME__/$PACKAGE_NAME}
       SYMBOL_CONTENT=${SYMBOL_CONTENT//__SERVICE_OR_MESSAGE_NAME__/$SERVICE_OR_MESSAGE_NAME}

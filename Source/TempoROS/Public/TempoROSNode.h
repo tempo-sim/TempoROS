@@ -6,8 +6,10 @@
 #include "TempoROSPublisher.h"
 #include "TempoROSService.h"
 #include "TempoROSSubscription.h"
+#include "TempoTF.h"
 
 #include "rclcpp.h"
+#include "TempoROSSettings.h"
 #include "image_transport/image_transport.hpp"
 
 #include "TempoROSNode.generated.h"
@@ -39,27 +41,26 @@ public:
 	TSet<FString> GetPublishedTopics() const;
 	
 	template <typename MessageType>
-	void AddPublisher(const FString& Topic)
+	void AddPublisher(const FString& Topic, const FROSQOSProfile& QOSProfile=FROSQOSProfile(), bool bPrependNodeName=true)
 	{
 		if (Publishers.Contains(Topic))
 		{
 			UE_LOG(LogTempoROS, Error, TEXT("Node already has publisher for topic %s"), *Topic);
 			return;
 		}
-		UE_LOG(LogTemp, Warning, TEXT("Adding publisher for %s"), *Topic);
-		Publishers.Emplace(Topic, MakeUnique<TTempoROSPublisher<MessageType>>(this, Topic));
+		Publishers.Emplace(Topic, MakeUnique<TTempoROSPublisher<MessageType>>(this, Topic, QOSProfile, bPrependNodeName));
 	}
 
 	UFUNCTION(BlueprintCallable)
 	void RemovePublisher(const FString& Topic);
 
 	template <typename MessageType>
-	void Publish(const FString& Topic, const MessageType& Message, bool bLatched=false)
+	void Publish(const FString& Topic, const MessageType& Message)
 	{
 		TUniquePtr<FTempoROSPublisher>* PublisherPtr = Publishers.Find(Topic);
 		if (!PublisherPtr)
 		{
-			PublisherPtr = &Publishers.Emplace(Topic, MakeUnique<TTempoROSPublisher<MessageType>>(this, Topic));
+			PublisherPtr = &Publishers.Emplace(Topic, MakeUnique<TTempoROSPublisher<MessageType>>(this, Topic, FROSQOSProfile(), true));
 		}
 		if (const TTempoROSPublisher<MessageType>* TypedPublisher = Cast<MessageType>(PublisherPtr->Get()))
 		{
@@ -89,6 +90,49 @@ public:
 		Services.Emplace(Name, MakeUnique<TTempoROSService<ServiceType>>(Node, Name, Callback));
 	}
 
+	UFUNCTION(BlueprintCallable, BlueprintPure=false, meta=(AutoCreateRefTerm="FromFrame,Timestamp", HidePin="Timestamp"))
+	void PublishStaticTransform(const FTransform& Transform, const FString& ToFrame, const FString& FromFrame="", double Timestamp=0.0) const
+	{
+		FString FromFrameResolved = FromFrame;
+		if (FromFrameResolved.IsEmpty())
+		{
+			FromFrameResolved = GetDefault<UTempoROSSettings>()->GetFixedFrameName();
+		}
+		double TimestampResolved = Timestamp;
+		if (TimestampResolved == 0.0)
+		{
+			TimestampResolved = GetWorld()->GetTimeSeconds();
+		}
+		StaticTFPublisher->PublishTransform(FStampedTransform(TimestampResolved, FromFrameResolved, ToFrame, Transform));
+	}
+
+	UFUNCTION(BlueprintCallable, BlueprintPure=false, meta=(AutoCreateRefTerm="FromFrame,Timestamp", HidePin="Timestamp"))
+	void PublishDynamicTransform(const FTransform& Transform, const FString& ToFrame, const FString& FromFrame="", double Timestamp=0.0) const
+	{
+		FString FromFrameResolved = FromFrame;
+		if (FromFrameResolved.IsEmpty())
+		{
+			FromFrameResolved = GetDefault<UTempoROSSettings>()->GetFixedFrameName();
+		}
+		double TimestampResolved = Timestamp;
+		if (TimestampResolved == 0.0)
+		{
+			TimestampResolved = GetWorld()->GetTimeSeconds();
+		}
+		DynamicTFPublisher->PublishTransform(FStampedTransform(TimestampResolved, FromFrameResolved, ToFrame, Transform));
+	}
+
+	UFUNCTION(BlueprintCallable, meta=(AutoCreateRefTerm="FromFrame,Timestamp", HidePin="Timestamp"))
+	FTransform GetTransform(const FString& ToFrame, const FString& FromFrame="", double Timestamp=0.0) const
+	{
+		FString FromFrameResolved = FromFrame;
+		if (FromFrameResolved.IsEmpty())
+		{
+			FromFrameResolved = GetDefault<UTempoROSSettings>()->GetFixedFrameName();
+		}
+		return TFListener->GetTransform(FromFrameResolved, ToFrame, Timestamp);
+	}
+
 	UFUNCTION(BlueprintCallable)
 	void Tick(float DeltaTime) const;
 
@@ -104,4 +148,8 @@ private:
 
 	std::shared_ptr<rclcpp::Node> Node = nullptr;
 	std::unique_ptr<image_transport::ImageTransport> ImageTransport;
+
+	TUniquePtr<FTempoStaticTFPublisher> StaticTFPublisher;
+	TUniquePtr<FTempoDynamicTFPublisher> DynamicTFPublisher;
+	TUniquePtr<FTempoTFListener> TFListener;
 };

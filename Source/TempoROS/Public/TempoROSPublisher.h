@@ -4,9 +4,16 @@
 
 #include "TempoROSConversion.h"
 
+#include "TempoROSTypes.h"
+
 #include "rclcpp.h"
 #include "image_transport/image_transport.hpp"
 #include "sensor_msgs/msg/image.hpp"
+
+static FString PrependNodeName(const std::shared_ptr<rclcpp::Node>& Node, const FString& Topic)
+{
+	return FString::Printf(TEXT("%s/%s"), UTF8_TO_TCHAR(Node->get_name()), *Topic);
+}
 
 struct IPublisherSupportInterface
 {
@@ -30,8 +37,8 @@ struct TTempoROSPublisher : FTempoROSPublisher
 {
 	using ROSMessageType = typename TImplicitToROSConverter<MessageType>::ToType;
 	
-	TTempoROSPublisher(const IPublisherSupportInterface* PublisherSupport, const FString& Topic)
-		: Publisher(PublisherSupport->GetNode()->create_publisher<ROSMessageType>(TCHAR_TO_UTF8(*Topic), rclcpp::QoS(10).reliable().transient_local())) {}
+	TTempoROSPublisher(const IPublisherSupportInterface* PublisherSupport, const FString& Topic, const FROSQOSProfile& QOSProfile, bool bPrependNodeName)
+		: Node(PublisherSupport->GetNode()), Publisher(Node->create_publisher<ROSMessageType>(bPrependNodeName ? TCHAR_TO_UTF8(*PrependNodeName(Node, Topic)) : TCHAR_TO_UTF8(*Topic), QOSProfile.ToROS())) {}
 	
 	void Publish(const MessageType& Message) const
 	{
@@ -49,17 +56,15 @@ struct TTempoROSPublisher : FTempoROSPublisher
 	}
 
 private:
+	const std::shared_ptr<rclcpp::Node>& Node;
 	std::shared_ptr<rclcpp::Publisher<ROSMessageType>> Publisher;
 };
 
 template <ImageConvertible MessageType>
 struct TTempoROSPublisher<MessageType> : FTempoROSPublisher
 {
-	TTempoROSPublisher(const IPublisherSupportInterface* PublisherSupport, const FString& Topic)
-		: Publisher(PublisherSupport->GetImageTransport()->advertise(TCHAR_TO_UTF8(*Topic), 10))
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Making ImageConvertible publisher for %s"), *Topic);
-	}
+	TTempoROSPublisher(const IPublisherSupportInterface* PublisherSupport, const FString& Topic, const FROSQOSProfile& QOSProfile, bool bPrependNodeName)
+		: Node(PublisherSupport->GetNode()), Publisher(PublisherSupport->GetImageTransport()->advertise(bPrependNodeName ? TCHAR_TO_UTF8(*PrependNodeName(Node, Topic)) : TCHAR_TO_UTF8(*Topic), QOSProfile.QueueSize, QOSProfile.Durability == EROSQOSDurability::TransientLocal)) {}
 	
 	void Publish(const MessageType& Message) const
 	{
@@ -77,6 +82,7 @@ struct TTempoROSPublisher<MessageType> : FTempoROSPublisher
 	}
 
 private:
+	const std::shared_ptr<rclcpp::Node>& Node;
 	image_transport::Publisher Publisher;
 };
 

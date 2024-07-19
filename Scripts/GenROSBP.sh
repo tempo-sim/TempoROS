@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Copyright Tempo Simulation, LLC. All Rights Reserved
 
 set -e
 
@@ -35,6 +36,8 @@ __INCLUDES__
 
 #include \"TempoROSNode.h\"
 
+#include \"TempoROSTypes.h\"
+
 #include \"Kismet/BlueprintFunctionLibrary.h\"
 
 #include \"__MODULENAME__TempoROSBlueprintFunctionLibrary.generated.h\"
@@ -55,7 +58,13 @@ BP_INCLUDE_TEMPLATE=\
 
 BP_PUBLISHER_TEMPLATE=\
 "
-    UFUNCTION(BlueprintCallable, Category = "TempoROS")
+    UFUNCTION(BlueprintCallable, Category = \"TempoROS\", meta=(AutoCreateRefTerm=\"QOSProfile\"))
+    static void Add__SANITIZEDMESSAGETYPE__Publisher(UTempoROSNode* Node, const FString& Topic, const FROSQOSProfile& QOSProfile=FROSQOSProfile(), bool bPrependNodeName=true)
+    {
+        Node->AddPublisher<__MESSAGETYPE__>(Topic, QOSProfile, bPrependNodeName);
+    }
+
+    UFUNCTION(BlueprintCallable, Category = \"TempoROS\")
     static void Publish__SANITIZEDMESSAGETYPE__(UTempoROSNode* Node, const FString& Topic, const __MESSAGETYPE__& Message)
     {
         Node->Publish<__MESSAGETYPE__>(Topic, Message);

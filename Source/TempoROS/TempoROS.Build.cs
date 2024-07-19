@@ -23,6 +23,7 @@ public class TempoROS : ModuleRules
 			{
 				// Unreal
 				"CoreUObject",
+				"DeveloperSettings",
 				"Engine",
 				"Slate",
 				"SlateCore",
@@ -33,5 +34,7 @@ public class TempoROS : ModuleRules
 		{
 			PrivateDependencyModuleNames.Add("HotReload");
 		}
+
+		bEnableExceptions = true;
 	}
 }

@@ -2,6 +2,8 @@
 
 #include "TempoROS.h"
 
+#include "TempoROSSettings.h"
+
 #if WITH_EDITOR
 #include "IHotReload.h"
 #endif
@@ -45,34 +47,77 @@ void SetEnvironmentVars()
 	FPaths::CollapseRelativeDirectories(LibDir);
 	checkf(FPaths::DirectoryExists(*LibDir), TEXT("rclcpp library directory %s did not exist"), *LibDir);
 	FPlatformMisc::SetEnvironmentVar(TEXT("AMENT_PREFIX_PATH"), *LibDir);
-
-	// RMW_IMPLEMENTATION
-	FPlatformMisc::SetEnvironmentVar(TEXT("RMW_IMPLEMENTATION"), TEXT("rmw_fastrtps_cpp"));
 }
 
 void FTempoROSModule::StartupModule()
 {
 	SetEnvironmentVars();
 	
-	rcutils_logging_set_output_handler(rcutils_logging_console_output_handler);
-	rclcpp::init(0, nullptr);
+	InitROS();
 	
 #if WITH_EDITOR
-	IHotReloadModule::Get().OnModuleCompilerStarted().AddLambda([](bool bIsAsyncCompile)
+	IHotReloadModule::Get().OnModuleCompilerStarted().AddLambda([this](bool bIsAsyncCompile)
 	{
-		rclcpp::shutdown();
+		ShutdownROS();
 	});
 
-	IHotReloadModule::Get().OnModuleCompilerFinished().AddLambda([](const FString&, ECompilationResult::Type, bool)
+	IHotReloadModule::Get().OnModuleCompilerFinished().AddLambda([this](const FString&, ECompilationResult::Type, bool)
     {
-		rclcpp::init(0, nullptr);
+		InitROS();
     });
 #endif
+
+	GetMutableDefault<UTempoROSSettings>()->TempoROSSettingsChangedEvent.AddRaw(this, &FTempoROSModule::InitROS);
 }
 
 void FTempoROSModule::ShutdownModule()
 {
-	rclcpp::shutdown();
+	ShutdownROS();
+}
+
+void FTempoROSModule::InitROS()
+{
+	if (bROSInitialized)
+	{
+		ShutdownROS();
+	}
+	
+	// RMW_IMPLEMENTATION
+	const UTempoROSSettings* TempoROSSettings = GetDefault<UTempoROSSettings>();
+	switch (const ERMWImplementation RMWImplementation = TempoROSSettings->GetRMWImplementation())
+	{
+	case ERMWImplementation::CycloneDDS:
+		{
+			FPlatformMisc::SetEnvironmentVar(TEXT("RMW_IMPLEMENTATION"), TEXT("rmw_cyclonedds_cpp"));
+			break;
+		}
+	case ERMWImplementation::FastRTPS:
+		{
+			FPlatformMisc::SetEnvironmentVar(TEXT("RMW_IMPLEMENTATION"), TEXT("rmw_fastrtps_cpp"));
+			break;
+		}
+	}
+
+	// ROS_DOMAIN_ID
+	FPlatformMisc::SetEnvironmentVar(TEXT("ROS_DOMAIN_ID"), *FString::FromInt(TempoROSSettings->GetROSDomainID()));
+
+	rclcpp::init(0, nullptr);
+	
+	bROSInitialized = true;
+}
+
+void FTempoROSModule::ShutdownROS()
+{
+	if (bROSInitialized)
+	{
+		rclcpp::shutdown();
+	
+		bROSInitialized = false;
+	}
+	else
+	{
+		UE_LOG(LogTempoROS, Warning, TEXT("ShutdownROS called when ROS was not initialized"));
+	}
 }
 
 #undef LOCTEXT_NAMESPACE
