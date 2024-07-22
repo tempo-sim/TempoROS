@@ -6,6 +6,8 @@ using System.IO;
 using System.Linq;
 using UnrealBuildTool;
 
+// public class rclcppCopy : AutomationTool.
+
 public class rclcpp : ModuleRules
 {
     public class ModuleDepPaths
@@ -24,7 +26,7 @@ public class rclcpp : ModuleRules
 
     private IEnumerable<string> FindFilesInDirectory(string dir, string suffix = "")
     {
-        return Directory.EnumerateFiles(dir, "*." + suffix, SearchOption.AllDirectories).Where(file => !Path.GetDirectoryName(file).Contains("Python3.framework"));
+        return Directory.EnumerateFiles(dir, "*." + suffix, SearchOption.AllDirectories);
     }
 
     public ModuleDepPaths GatherDeps()
@@ -47,7 +49,7 @@ public class rclcpp : ModuleRules
         else if (Target.Platform == UnrealTargetPlatform.Linux)
         {
             LibraryPaths.AddRange(FindFilesInDirectory(Path.Combine(ModuleDirectory, "Libraries", "Linux"), "so"));
-            // RuntimeLibraryPaths.AddRange(FindFilesInDirectory(Path.Combine(ModuleDirectory, "Libraries", "Linux"), "so*"));
+            RuntimeLibraryPaths.AddRange(FindFilesInDirectory(Path.Combine(ModuleDirectory, "Libraries", "Linux"), "so*"));
         }
         else
         {
@@ -70,13 +72,7 @@ public class rclcpp : ModuleRules
         {
             RuntimeDependencies.Add(libraryPath);
         }
-        // PublicDelayLoadDLLs.AddRange(moduleDepPaths.GeneratedLibraryPaths);
-        // PublicRuntimeLibraryPaths.Add(Path.Combine(ModuleDirectory, "Generated"));
-        // foreach (string libraryPath in moduleDepPaths.GeneratedLibraryPaths)
-        // {
-        //     RuntimeDependencies.Add(libraryPath);
-        // }
-        
+
         PrivateDependencyModuleNames.AddRange(
             new string[]
             {
@@ -92,5 +88,10 @@ public class rclcpp : ModuleRules
         PublicDefinitions.Add("RCLCPP_INTRA_PROCESS_DISABLED=1");
 
         bEnableExceptions = true;
+        
+        AddEngineThirdPartyPrivateStaticDependencies(Target, "OpenSSL");
+        AddEngineThirdPartyPrivateStaticDependencies(Target, "zlib");
+        AddEngineThirdPartyPrivateStaticDependencies(Target, "UElibPNG");
+        AddEngineThirdPartyPrivateStaticDependencies(Target, "Python3");
     }
 }
