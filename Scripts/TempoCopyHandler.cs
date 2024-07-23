@@ -5,7 +5,7 @@ using UnrealBuildTool;
 using Microsoft.Extensions.Logging;
 using EpicGames.Core;
 
-public static class FileUtil
+public static class FileUtils
 {
     public static void CopyPreservingSymlinks(string sourcePath, string destinationPath, ILogger Logger)
     {
