@@ -19,5 +19,16 @@
 			"Type": "Runtime",
 			"LoadingPhase": "Default"
 		}
-	]
+	],
+	"PreBuildSteps": {
+		"Win64": [
+			"$(PluginDir)\\Scripts\\PreBuild.bat \"$(EngineDir)\" \"$(ProjectFile)\" \"$(ProjectDir)\" \"$(TargetName)\" \"$(TargetConfiguration)\" \"$(TargetPlatform)\" \"$(PluginDir)\\Source\\ThirdParty\\rclcpp\""
+		],
+		"Mac": [
+			"$(PluginDir)/Scripts/PreBuild.sh \"$(EngineDir)\" \"$(ProjectFile)\" \"$(ProjectDir)\" \"$(TargetName)\" \"$(TargetConfiguration)\" \"$(TargetPlatform)\" \"$(PluginDir)/Source/ThirdParty/rclcpp\""
+		],
+		"Linux": [
+			"$(PluginDir)/Scripts/PreBuild.sh \"$(EngineDir)\" \"$(ProjectFile)\" \"$(ProjectDir)\" \"$(TargetName)\" \"$(TargetConfiguration)\" \"$(TargetPlatform)\" \"$(PluginDir)/Source/ThirdParty/rclcpp\""
+		]
+	}
 }
