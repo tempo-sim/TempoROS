@@ -1,0 +1,10 @@
+{
+  "artifact": "rclcpp",
+  "release": "v0.7",
+  "md5_hashes": {
+    "Linux": "",
+    "Mac": "",
+    "Windows": "",
+    "Windows+Linux": ""
+  }
+}
