@@ -12,4 +12,10 @@ class TEMPOROS_API FTempoROSModule : public IModuleInterface
 public:
 	virtual void StartupModule() override;
 	virtual void ShutdownModule() override;
+
+private:
+	void InitROS();
+	void ShutdownROS();
+
+	bool bROSInitialized = false;
 };
