@@ -6,6 +6,8 @@
 
 #include "rosgraph_msgs/msg/clock.hpp"
 
+DEFINE_TEMPOROS_MESSAGE_TYPE_TRAITS(double)
+
 template <>
 struct TImplicitToROSConverter<double> : TToROSConverter<rosgraph_msgs::msg::Clock, double>
 {
@@ -47,6 +49,6 @@ void UTempoROSClockServer::OnWorldPreActorTick(UWorld* World, ELevelTick TickTyp
 	const EWorldType::Type WorldType = World->WorldType;
 	if (WorldType == EWorldType::Game || WorldType == EWorldType::PIE)
 	{
-		ROSNode->Publish("Clock", World->GetTimeSeconds());
+		ROSNode->Publish("clock", World->GetTimeSeconds());
 	}
 }
