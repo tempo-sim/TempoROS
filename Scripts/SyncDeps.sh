@@ -131,7 +131,7 @@ SYNC_THIRD_PARTY_DEPS () {
   
   cd "$THIRD_PARTY_DIR/$ARTIFACT"
   # awk extracts the size, date modified, and filename fields from the ls -l command
-  MEASURED_HASH=$(find . -mindepth 2 -type f ! -name ".*" -type f | xargs ls -l | awk '{print $5 $6 $7 $8 $9}' | "$HASHER" | cut -d ' ' -f 1)
+  MEASURED_HASH=$(find . -mindepth 2 -type f -not -name ".*" -not -path "./Public/*" -not -path "./Private/*" | xargs ls -l | awk '{print $5 $6 $7 $8 $9}'| "$HASHER" | cut -d ' ' -f 1)
   echo "New hash: $MEASURED_HASH"
 }
 
