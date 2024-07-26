@@ -26,17 +26,6 @@ struct FTwist
 	FVector AngularVelocity;
 };
 
-struct FStampedTransform
-{
-	FStampedTransform(double TimestampIn, const FString& FromFrameIn, const FString& ToFrameIn, const FTransform& TransformIn)
-		: Timestamp(TimestampIn), FromFrame(FromFrameIn), ToFrame(ToFrameIn), Transform(TransformIn) {}
-	
-	double Timestamp;
-	FString FromFrame;
-	FString ToFrame;
-	FTransform Transform;
-};
-
 UENUM(Blueprintable, BlueprintType)
 enum class ERMWImplementation: uint8
 {
