@@ -89,7 +89,7 @@ private:
 template <typename MessageType>
 static TTempoROSPublisher<MessageType>* Cast(FTempoROSPublisher* Publisher)
 {
-	if (TMessageTypeTraits<MessageType>::MessageTypeDescriptor)
+	if (TMessageTypeTraits<MessageType>::MessageTypeDescriptor == NAME_None)
 	{
 		UE_LOG(LogTempoROS, Error, TEXT("Attempted to publish a type with missing type traits. Use DEFINE_TEMPOROS_MESSAGE_TYPE_TRAITS to define."));
 		return nullptr;
