@@ -11,7 +11,10 @@
 #include "rclcpp/time.hpp"
 
 DEFINE_TEMPOROS_MESSAGE_TYPE_TRAITS(FString)
+DEFINE_TEMPOROS_MESSAGE_TYPE_TRAITS(FVector)
+DEFINE_TEMPOROS_MESSAGE_TYPE_TRAITS(FRotator)
 DEFINE_TEMPOROS_MESSAGE_TYPE_TRAITS(FTransform)
+DEFINE_TEMPOROS_MESSAGE_TYPE_TRAITS(FTwist)
 
 template <>
 struct TToROSConverter<std::string, FString> : TConverter<TToROSConverter<std::string, FString>>
@@ -93,6 +96,9 @@ struct TImplicitFromROSConverter<FVector> : TFromROSConverter<geometry_msgs::msg
 		return ToType(100.0 * ROSVector.x, -100.0 * ROSVector.y, 100.0 * ROSVector.z);
 	}
 };
+
+// Helpful link explaining conversion of quaternion between left and right-handed coordinates
+// https://gamedev.stackexchange.com/questions/157946/converting-a-quaternion-in-a-right-to-left-handed-coordinate-system
 
 template <>
 struct TToROSConverter<geometry_msgs::msg::Quaternion, FQuat> : TConverter<TToROSConverter<geometry_msgs::msg::Quaternion, FQuat>>

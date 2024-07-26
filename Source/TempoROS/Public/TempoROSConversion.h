@@ -14,6 +14,7 @@ template <> inline FName TMessageTypeTraits<MessageType>::MessageTypeDescriptor 
 template <typename T>
 struct TConverter
 {
+	// From kennytm's answer here: https://stackoverflow.com/questions/8113878/c-crtp-and-accessing-deriveds-nested-typedefs-from-base
 	template <typename X = T>
 	using ToType = typename X::ToType;
 
