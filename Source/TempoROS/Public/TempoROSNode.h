@@ -43,6 +43,11 @@ public:
 	template <typename MessageType>
 	void AddPublisher(const FString& Topic, const FROSQOSProfile& QOSProfile=FROSQOSProfile(), bool bPrependNodeName=true)
 	{
+		if (TMessageTypeTraits<MessageType>::MessageTypeDescriptor == NAME_None)
+		{
+			UE_LOG(LogTempoROS, Error, TEXT("Attempted to create a publisher for a type with missing type traits. Use DEFINE_TEMPOROS_MESSAGE_TYPE_TRAITS to define."));
+			return;
+		}
 		if (Publishers.Contains(Topic))
 		{
 			UE_LOG(LogTempoROS, Error, TEXT("Node already has publisher for topic %s"), *Topic);
@@ -76,6 +81,7 @@ public:
 		Subscriptions.FindOrAdd(Topic).Emplace(MakeUnique<TTempoROSSubscription<MessageType>>(Node, Topic, Callback));
 	}
 
+	// Remove all subscriptions for a topic. TODO: Support removing individual subscriptions. 
 	UFUNCTION(BlueprintCallable)
 	void RemoveSubscriptions(const FString& Topic);
 
@@ -90,6 +96,8 @@ public:
 		Services.Emplace(Name, MakeUnique<TTempoROSService<ServiceType>>(Node, Name, Callback));
 	}
 
+	// Publish the "static" transform, which will be latched and provided to all new listeners, between the To and From
+	// frames at the specified time. Timestamp=0.0 (the default) means "now".
 	UFUNCTION(BlueprintCallable, BlueprintPure=false, meta=(AutoCreateRefTerm="FromFrame,Timestamp", HidePin="Timestamp"))
 	void PublishStaticTransform(const FTransform& Transform, const FString& ToFrame, const FString& FromFrame="", double Timestamp=0.0) const
 	{
@@ -106,6 +114,8 @@ public:
 		StaticTFPublisher->PublishTransform(FStampedTransform(TimestampResolved, FromFrameResolved, ToFrame, Transform));
 	}
 
+	// Publish the "dynamic" transform, which will not be latched, between the To and From
+	// frames at the specified time. Timestamp=0.0 (the default) means "now".
 	UFUNCTION(BlueprintCallable, BlueprintPure=false, meta=(AutoCreateRefTerm="FromFrame,Timestamp", HidePin="Timestamp"))
 	void PublishDynamicTransform(const FTransform& Transform, const FString& ToFrame, const FString& FromFrame="", double Timestamp=0.0) const
 	{
@@ -122,6 +132,8 @@ public:
 		DynamicTFPublisher->PublishTransform(FStampedTransform(TimestampResolved, FromFrameResolved, ToFrame, Transform));
 	}
 
+	// Get the transform between the To and From frames at the specified time.
+	// Timestamp=0.0 (the default) gets the latest transform.
 	UFUNCTION(BlueprintCallable, meta=(AutoCreateRefTerm="FromFrame,Timestamp", HidePin="Timestamp"))
 	FTransform GetTransform(const FString& ToFrame, const FString& FromFrame="", double Timestamp=0.0) const
 	{

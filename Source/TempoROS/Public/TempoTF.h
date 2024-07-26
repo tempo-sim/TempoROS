@@ -10,6 +10,17 @@
 #include "tf2_ros/static_transform_broadcaster.h"
 #include "tf2_ros/transform_listener.h"
 
+struct FStampedTransform
+{
+	FStampedTransform(double TimestampIn, const FString& FromFrameIn, const FString& ToFrameIn, const FTransform& TransformIn)
+		: Timestamp(TimestampIn), FromFrame(FromFrameIn), ToFrame(ToFrameIn), Transform(TransformIn) {}
+	
+	double Timestamp;
+	FString FromFrame;
+	FString ToFrame;
+	FTransform Transform;
+};
+
 template <>
 struct TImplicitToROSConverter<FStampedTransform> : TToROSConverter<geometry_msgs::msg::TransformStamped, FStampedTransform>
 {
@@ -67,7 +78,7 @@ private:
 struct FTempoTFListener
 {
 	FTempoTFListener(const std::shared_ptr<rclcpp::Node>& Node)
-		: Listener(Buffer, Node, true) {}
+		: Listener(Buffer, Node, true /*spin_thread*/) {}
 
 	FTransform GetTransform(const FString& FromFrame, const FString& ToFrame, const double Timestamp) const
 	{

@@ -25,7 +25,7 @@ struct TEMPOROS_API TTempoROSService : FTempoROSService
 	using ROSResponseType = typename ROSServiceType::Response;
 	
 	TTempoROSService(const std::shared_ptr<rclcpp::Node>& Node, const FString& ServiceName, const TROSServiceDelegate<ServiceType>& Callback)
-		: Service(Node->create_service<ROSServiceType>(TCHAR_TO_UTF8(*ServiceName), [Callback](const std::shared_ptr<typename ROSServiceType::Request> Request, const std::shared_ptr<typename ROSServiceType::Response> Response)
+		: Service(Node->create_service<ROSServiceType>(TCHAR_TO_UTF8(*ServiceName), [Callback](const std::shared_ptr<typename ROSServiceType::Request> Request, std::shared_ptr<typename ROSServiceType::Response> Response)
 		{
 			if (Callback.IsBound())
 			{
