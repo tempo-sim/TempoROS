@@ -37,6 +37,7 @@ public class rclcpp : ModuleRules
 
         if (Target.Platform == UnrealTargetPlatform.Win64)
         {
+            // TODO: Is this correct on Windows?
             LibraryPaths.AddRange(FindFilesInDirectory(Path.Combine(ModuleDirectory, "Libraries", "Windows"), "dll"));
             RuntimeLibraryPaths.AddRange(FindFilesInDirectory(Path.Combine(ModuleDirectory, "Libraries", "Windows"), "dll"));
         }
@@ -81,11 +82,13 @@ public class rclcpp : ModuleRules
         
         if (Target.Platform == UnrealTargetPlatform.Linux)
         {
+            // TODO: Is this needed on Windows?
             PublicDefinitions.Add("_LIBCPP_HAS_NO_RTTI=1");
         }
 
         PublicDefinitions.Add("RCLCPP_INTRA_PROCESS_DISABLED=1");
 
+        // rclcpp and all modules that depend on it must enable exceptions.
         bEnableExceptions = true;
         
         AddEngineThirdPartyPrivateStaticDependencies(Target, "OpenSSL");

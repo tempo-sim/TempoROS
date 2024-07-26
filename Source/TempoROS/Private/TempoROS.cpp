@@ -15,9 +15,8 @@
 
 DEFINE_LOG_CATEGORY(LogTempoROS);
 
-void SetEnvironmentVars()
+void SetAmentPrefixPath()
 {
-	// AMENT_PREFIX_PATH
 	// Find the rclcpp module directory. The module is not loaded yet, so we can't use FModuleManager.
 	const FString ProjectPath = IFileManager::Get().ConvertToAbsolutePathForExternalAppForRead(*FPaths::ProjectDir());
 	TArray<FString> PossibleTargets;
@@ -51,7 +50,7 @@ void SetEnvironmentVars()
 
 void FTempoROSModule::StartupModule()
 {
-	SetEnvironmentVars();
+	SetAmentPrefixPath();
 	
 	InitROS();
 	
@@ -62,9 +61,9 @@ void FTempoROSModule::StartupModule()
 	});
 
 	IHotReloadModule::Get().OnModuleCompilerFinished().AddLambda([this](const FString&, ECompilationResult::Type, bool)
-    {
+	{
 		InitROS();
-    });
+	});
 #endif
 
 	GetMutableDefault<UTempoROSSettings>()->TempoROSSettingsChangedEvent.AddRaw(this, &FTempoROSModule::InitROS);

@@ -35,6 +35,7 @@ public class TempoROS : ModuleRules
 			PrivateDependencyModuleNames.Add("HotReload");
 		}
 
+		// All modules that depend on rclcpp must enable exceptions.
 		bEnableExceptions = true;
 	}
 }
