@@ -11,13 +11,17 @@ public class TempoROS : ModuleRules
 		PublicDependencyModuleNames.AddRange(
 			new string[]
 			{
+				// Unreal
 				"Core",
+				// Tempo
+				"rclcpp",
 			}
 			);
 		
 		PrivateDependencyModuleNames.AddRange(
 			new string[]
 			{
+				// Unreal
 				"CoreUObject",
 				"DeveloperSettings",
 				"Engine",
@@ -25,5 +29,13 @@ public class TempoROS : ModuleRules
 				"SlateCore",
 			}
 			);
+		
+		if (Target.bBuildEditor)
+		{
+			PrivateDependencyModuleNames.Add("HotReload");
+		}
+
+		// All modules that depend on rclcpp must enable exceptions.
+		bEnableExceptions = true;
 	}
 }
