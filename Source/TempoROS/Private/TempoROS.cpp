@@ -21,13 +21,22 @@ void SetAmentPrefixPath()
 	const FString ProjectPath = IFileManager::Get().ConvertToAbsolutePathForExternalAppForRead(*FPaths::ProjectDir());
 	TArray<FString> PossibleTargets;
 #if WITH_EDITOR
+	// With the Editor we simply look for the Build.cs file
 	IFileManager::Get().FindFilesRecursive(PossibleTargets, *ProjectPath, TEXT("rclcpp.Build.cs"), true, false);
 	for (FString& PossibleTarget : PossibleTargets)
 	{
 		PossibleTarget = FPaths::GetPath(PossibleTarget);
 	}
 #else
+	// In the packaged game we search for a directory called "rclcpp" within a directory called "ThirdParty" 
 	IFileManager::Get().FindFilesRecursive(PossibleTargets, *ProjectPath, TEXT("rclcpp"), false, true);
+	for (auto PossibleTargetIt = PossibleTargets.CreateIterator(); PossibleTargetIt; ++PossibleTargetIt)
+	{
+		if (!FPaths::GetPath(*PossibleTargetIt).EndsWith(TEXT("ThirdParty")))
+		{
+			PossibleTargetIt.RemoveCurrent();
+		}
+	}
 #endif
 	checkf(PossibleTargets.Num() == 1, TEXT("Expected to find exactly one rclcpp module"));
 	const FString rclcppDir = PossibleTargets[0];
