@@ -146,7 +146,7 @@ GEN_MODULE_MSG_AND_SRVS() {
       FILE=$(cygpath -m "$FILE")
     fi
     RELATIVE_PATH="${FILE#./}"
-    GEN_COMMAND="$GENTOOL generate --type cpp --type-support cpp --type-support introspection_cpp --type-support fastrtps_cpp $PACKAGE_NAME $SOURCE_DIR:$RELATIVE_PATH -o $MODULE_GEN_TEMP_DIR/$PACKAGE_NAME"
+    GEN_COMMAND="python3 $GENTOOL generate --type cpp --type-support cpp --type-support introspection_cpp --type-support fastrtps_cpp $PACKAGE_NAME $SOURCE_DIR:$RELATIVE_PATH -o $MODULE_GEN_TEMP_DIR/$PACKAGE_NAME"
     for SUBDIR in "$INCLUDE_DIR"/*/ ; do
         if [ -d "$SUBDIR" ]; then
             GEN_COMMAND+=" -I $(realpath "$SUBDIR")"
