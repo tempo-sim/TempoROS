@@ -65,7 +65,7 @@ SYNC_THIRD_PARTY_DEPS () {
     # shellcheck disable=SC2038
     cd "$THIRD_PARTY_DIR/$ARTIFACT"
     # awk extracts the size, date modified, and filename fields from the ls -l command
-    MEASURED_HASH=$(find . -mindepth 2 -type f -not -name ".*" -not -path "./Public/*" -not -path "./Private/*" | xargs ls -l | awk '{print $5 $6 $7 $8 $9}'| "$HASHER" | cut -d ' ' -f 1)
+    MEASURED_HASH=$(find . -mindepth 2 -type f -not -name ".*" -not -path "./Public/*" -not -path "./Private/*" -exec ls -l {} + | awk '{print $5 $6 $7 $8 $9}'| "$HASHER" | cut -d ' ' -f 1)
     
     if [ "$FORCE_ARG" = "-force" ]; then
       DO_UPDATE="Y"
@@ -131,7 +131,7 @@ SYNC_THIRD_PARTY_DEPS () {
   
   cd "$THIRD_PARTY_DIR/$ARTIFACT"
   # awk extracts the size, date modified, and filename fields from the ls -l command
-  MEASURED_HASH=$(find . -mindepth 2 -type f -not -name ".*" -not -path "./Public/*" -not -path "./Private/*" | xargs ls -l | awk '{print $5 $6 $7 $8 $9}'| "$HASHER" | cut -d ' ' -f 1)
+  MEASURED_HASH=$(find . -mindepth 2 -type f -not -name ".*" -not -path "./Public/*" -not -path "./Private/*" -exec ls -l {} + | awk '{print $5 $6 $7 $8 $9}'| "$HASHER" | cut -d ' ' -f 1)
   echo "New hash: $MEASURED_HASH"
 }
 
