@@ -130,7 +130,7 @@ GEN_MODULE_MSG_AND_SRVS() {
   local SOURCE_DIR="$INCLUDE_DIR"/"$MODULE_NAME"
   local PACKAGE_NAME
   PACKAGE_NAME=$(PASCAL_TO_SNAKE "$MODULE_NAME")
-
+  
   local MODULE_GEN_TEMP_DIR
   MODULE_GEN_TEMP_DIR="$GEN_TEMP_DIR/$MODULE_NAME"
   mkdir -p "$MODULE_GEN_TEMP_DIR/$PACKAGE_NAME"
@@ -239,7 +239,9 @@ GEN_MODULE_MSG_AND_SRVS() {
     FORCEEXPORT_CONTENTS="${FORCEEXPORT_CONTENTS//__PACKAGE_NAME__/$PACKAGE_NAME}"
     
     cd "$MODULE_PATH"
+    ANY_FILES=0
     for FILE in $(find . -type f -name "*__rosidl_typesupport_*_cpp.hpp"); do
+      ANY_FILES=1
       RELATIVE_PATH="${FILE#./}"
       if [[ $RELATIVE_PATH == *"/srv/"* ]]; then
         SERVICE_OR_MESSAGE="service"
@@ -262,24 +264,51 @@ GEN_MODULE_MSG_AND_SRVS() {
       SYMBOL_CONTENT=${SYMBOL_CONTENT//__SERVICE_OR_MESSAGE_NAME__/$SERVICE_OR_MESSAGE_NAME}
       FORCEEXPORT_CONTENTS=${FORCEEXPORT_CONTENTS//__SYMBOLS__/$SYMBOL_CONTENT"__SYMBOLS__"}
     done
-    # Now that replacement is complete, remove all placeholders
-    FORCEEXPORT_CONTENTS=$(echo "$FORCEEXPORT_CONTENTS" | sed "/__INCLUDES__/d")
-    FORCEEXPORT_CONTENTS=$(echo "$FORCEEXPORT_CONTENTS" | sed "/__SYMBOLS__/d")
-    local TEMP_FORCEEXPORTS_FILE="$MODULE_GEN_TEMP_DIR/$PACKAGE_NAME/${PACKAGE_NAME}_force_export_rosidl_typesupport_symbols.cpp"
-    echo "$FORCEEXPORT_CONTENTS" > "$TEMP_FORCEEXPORTS_FILE"
-    REPLACE_IF_STALE "$TEMP_FORCEEXPORTS_FILE" "$MODULE_PATH/Private/$PACKAGE_NAME/${PACKAGE_NAME}_force_export_rosidl_typesupport_symbols.cpp"
+    if [[ $ANY_FILES != 0 ]]; then
+      # Now that replacement is complete, remove all placeholders
+      FORCEEXPORT_CONTENTS=$(echo "$FORCEEXPORT_CONTENTS" | sed "/__INCLUDES__/d")
+      FORCEEXPORT_CONTENTS=$(echo "$FORCEEXPORT_CONTENTS" | sed "/__SYMBOLS__/d")
+      local TEMP_FORCEEXPORTS_FILE="$MODULE_GEN_TEMP_DIR/$PACKAGE_NAME/${PACKAGE_NAME}_force_export_rosidl_typesupport_symbols.cpp"
+      echo "$FORCEEXPORT_CONTENTS" > "$TEMP_FORCEEXPORTS_FILE"
+      REPLACE_IF_STALE "$TEMP_FORCEEXPORTS_FILE" "$MODULE_PATH/Private/$PACKAGE_NAME/${PACKAGE_NAME}_force_export_rosidl_typesupport_symbols.cpp"
+    fi
 }
 
 echo "Generating ROS IDL code..."
 
-# First iterate through all the modules to:
+# Find dotnet
+cd "$ENGINE_DIR"
+if [[ "$OSTYPE" = "msys" ]]; then
+  DOTNET=$(find ./Binaries/ThirdParty/DotNet -type f -name dotnet.exe)
+elif [[ "$OSTYPE" = "darwin"* ]]; then
+  DOTNETS=$(find ./Binaries/ThirdParty/DotNet -type f -name dotnet)
+  ARCH=$(arch)
+  if [[ "$ARCH" = "arm64" ]]; then
+    DOTNET=$(echo "${DOTNETS[@]}" | grep -E "mac-arm64/dotnet")
+  elif [[ "$ARCH" = "i386" ]]; then
+    DOTNET=$(echo "${DOTNETS[@]}" | grep -E "mac-x64/dotnet")
+  fi
+elif [[ "$OSTYPE" = "linux-gnu"* ]]; then
+  DOTNET=$(find ./Binaries/ThirdParty/DotNet -type f -name dotnet)
+fi
+
+if [ -z ${DOTNET+x} ]; then
+  echo -e "Unable generate ROS IDL code. Couldn't find dotnet.\n"
+  exit 1
+fi
+
+# First dump a json describing all module dependencies.
+eval "$DOTNET" "./Binaries/DotNET/UnrealBuildTool/UnrealBuildTool.dll" -Mode=JsonExport "$TARGET_NAME" "$TARGET_PLATFORM" "$TARGET_CONFIG" -Project="$PROJECT_FILE" -OutputFile="$TEMP/TempoModules.json" -NoMutex > /dev/null 2>&1
+JSON_DATA=$(cat "$TEMP/TempoModules.json")
+# Extract the public and private dependencies of all C++ project modules.
+FILTERED_MODULES=$(echo "$JSON_DATA" | jq --arg project_root "$PROJECT_ROOT" '.Modules | to_entries[] | select(.value.Type == "CPlusPlus") | select(.value.Directory | startswith($project_root)) | {(.key): {Directory: .value.Directory, PublicDependencyModules: .value.PublicDependencyModules, PrivateDependencyModules: .value.PrivateDependencyModules}}')
+MODULE_INFO=$(echo "$FILTERED_MODULES" | jq -s 'add')
+
+# Then iterate through all the modules to:
 # - Copy all ROS IDL files to a temp source directory - one per module!
 # - Check that no module names are repeated
 # - Check that all ROS IDL files are in the correct locations
-for BUILD_CS_FILE in $(find "$PROJECT_ROOT" -name '*.Build.cs' -type f); do
-  BUILD_CS_FILENAME="$(basename "$BUILD_CS_FILE")"
-  MODULE_NAME="${BUILD_CS_FILENAME%%.*}"
-  MODULE_PATH="$(dirname "$BUILD_CS_FILE")"
+echo "$MODULE_INFO" | jq -r -c 'to_entries[] | .key  + " " + .value.Directory' | while read MODULE_NAME MODULE_PATH; do
   MODULE_SRC_TEMP_DIR="$SRC_TEMP_DIR/$MODULE_NAME"
   if [ -d "$MODULE_SRC_TEMP_DIR" ]; then
     echo "Multiple modules named $MODULE_NAME found. Please rename one."
@@ -331,30 +360,6 @@ for BUILD_CS_FILE in $(find "$PROJECT_ROOT" -name '*.Build.cs' -type f); do
   fi
 done
 
-# Find dotnet
-cd "$ENGINE_DIR"
-if [[ "$OSTYPE" = "msys" ]]; then
-  DOTNET=$(find ./Binaries/ThirdParty/DotNet -type f -name dotnet.exe)
-elif [[ "$OSTYPE" = "darwin"* ]]; then
-  DOTNETS=$(find ./Binaries/ThirdParty/DotNet -type f -name dotnet)
-  ARCH=$(arch)
-  if [[ "$ARCH" = "arm64" ]]; then
-    DOTNET=$(echo "${DOTNETS[@]}" | grep -E "mac-arm64/dotnet")
-  elif [[ "$ARCH" = "i386" ]]; then
-    DOTNET=$(echo "${DOTNETS[@]}" | grep -E "mac-x64/dotnet")
-  fi
-elif [[ "$OSTYPE" = "linux-gnu"* ]]; then
-  DOTNET=$(find ./Binaries/ThirdParty/DotNet -type f -name dotnet)
-fi
-
-if [ -z ${DOTNET+x} ]; then
-  echo -e "Unable generate ROS IDL code. Couldn't find dotnet.\n"
-  exit 1
-fi
-
-# Then dump a json describing all module dependencies.
-eval "$DOTNET" "./Binaries/DotNET/UnrealBuildTool/UnrealBuildTool.dll" -Mode=JsonExport "$TARGET_NAME" "$TARGET_PLATFORM" "$TARGET_CONFIG" -Project="$PROJECT_FILE" -OutputFile="$TEMP/TempoModules.json" -NoMutex > /dev/null 2>&1
-
 SYNC_MSGS_SRVS() {
   SRC="$1"
   DEST="$2"
@@ -373,10 +378,8 @@ SYNC_MSGS_SRVS() {
 GET_MODULE_INCLUDES_PUBLIC_ONLY() {
   local MODULE_NAME="$1"
   local INCLUDES_DIR="$2"
-  PUBLIC_DEPENDENCIES=$(jq -r --arg TargetName "$TARGET_NAME" --arg ModuleName "$MODULE_NAME" \
-    'select(.Name == $TargetName)["Modules"][$ModuleName]["PublicDependencyModules"][]' < "$TEMP/TempoModules.json")
+  PUBLIC_DEPENDENCIES=$(echo "$MODULE_INFO" | jq -r --arg module_name "$MODULE_NAME" '.[$module_name] | try .PublicDependencyModules[] // []')
   for PUBLIC_DEPENDENCY in $PUBLIC_DEPENDENCIES; do
-    PUBLIC_DEPENDENCY=$(echo "$PUBLIC_DEPENDENCY" | sed 's/\[rn]//')
     if [ -d "$SRC_TEMP_DIR/$PUBLIC_DEPENDENCY" ]; then # Only consider project modules
       if [ -d "$INCLUDES_DIR/$PUBLIC_DEPENDENCY" ]; then
         # We already have this dependency - but still add its public dependencies.
@@ -398,12 +401,9 @@ GET_MODULE_INCLUDES() {
   mkdir -p "$INCLUDES_DIR/$MODULE_NAME"
   SYNC_MSGS_SRVS "$SRC_TEMP_DIR/$MODULE_NAME/Public/" "$INCLUDES_DIR/$MODULE_NAME"
   SYNC_MSGS_SRVS "$SRC_TEMP_DIR/$MODULE_NAME/Private/" "$INCLUDES_DIR/$MODULE_NAME"
-  PUBLIC_DEPENDENCIES=$(jq -r --arg TargetName "$TARGET_NAME" --arg ModuleName "$MODULE_NAME" \
-    'select(.Name == $TargetName)["Modules"][$ModuleName]["PublicDependencyModules"][]' < "$TEMP/TempoModules.json")
-  PRIVATE_DEPENDENCIES=$(jq -r --arg TargetName "$TARGET_NAME" --arg ModuleName "$MODULE_NAME" \
-    'select(.Name == $TargetName)["Modules"][$ModuleName]["PrivateDependencyModules"][]' < "$TEMP/TempoModules.json")
+  PUBLIC_DEPENDENCIES=$(echo "$MODULE_INFO" | jq -r --arg module_name "$MODULE_NAME" '.[$module_name] | try .PublicDependencyModules[] // []')
+  PRIVATE_DEPENDENCIES=$(echo "$MODULE_INFO" | jq -r --arg module_name "$MODULE_NAME" '.[$module_name] | try .PrivateDependencyModules[] // []')
   for PUBLIC_DEPENDENCY in $PUBLIC_DEPENDENCIES; do
-    PUBLIC_DEPENDENCY=$(echo "$PUBLIC_DEPENDENCY" | sed 's/\[rn]//')
     if [ -d "$SRC_TEMP_DIR/$PUBLIC_DEPENDENCY" ]; then # Only consider project modules
       if [ -d "$INCLUDES_DIR/$PUBLIC_DEPENDENCY" ]; then
         # We already have this dependency - but still add its public dependencies.
@@ -418,7 +418,6 @@ GET_MODULE_INCLUDES() {
   done
 
   for PRIVATE_DEPENDENCY in $PRIVATE_DEPENDENCIES; do   
-    PRIVATE_DEPENDENCY=$(echo "$PRIVATE_DEPENDENCY" | sed 's/\[rn]//')
     if [[ -d "$SRC_TEMP_DIR/$PRIVATE_DEPENDENCY" ]]; then # Only consider project modules
       if [[ -d "$INCLUDES_DIR/$PRIVATE_DEPENDENCY" ]]; then
         # We already have this dependency - but still add its public dependencies.
@@ -434,18 +433,12 @@ GET_MODULE_INCLUDES() {
 }
 
 # Lastly, iterate over all the modules again to generate the ROS IDL code
-for BUILD_CS_FILE in $(find "$PROJECT_ROOT" -name '*.Build.cs' -type f); do
-  BUILD_CS_FILENAME="$(basename "$BUILD_CS_FILE")"
-  MODULE_NAME="${BUILD_CS_FILENAME%%.*}"
-  MODULE_PATH="$(dirname "$BUILD_CS_FILE")"
-  MODULE_TYPE=$(jq -r --arg TargetName "$TARGET_NAME" --arg ModuleName "$MODULE_NAME" \
-    'select(.Name == $TargetName)["Modules"][$ModuleName]["Type"]' < "$TEMP/TempoModules.json")
-  if [ "$MODULE_TYPE" != "CPlusPlus" ]; then
-    continue
+echo "$MODULE_INFO" | jq -r -c 'to_entries[] | .key  + " " + .value.Directory' | while read MODULE_NAME MODULE_PATH; do
+  if echo "$MODULE_INFO" | jq --arg module_name "$MODULE_NAME" -e '.[$module_name]' > /dev/null; then
+    MODULE_INCLUDES_TEMP_DIR="$INCLUDES_TEMP_DIR/$MODULE_NAME"
+    GET_MODULE_INCLUDES "$MODULE_NAME" "$MODULE_INCLUDES_TEMP_DIR"
+    GEN_MODULE_MSG_AND_SRVS "$MODULE_INCLUDES_TEMP_DIR" "$MODULE_PATH" "$MODULE_NAME"
   fi
-  MODULE_INCLUDES_TEMP_DIR="$INCLUDES_TEMP_DIR/$MODULE_NAME"
-  GET_MODULE_INCLUDES "$MODULE_NAME" "$MODULE_INCLUDES_TEMP_DIR"
-  GEN_MODULE_MSG_AND_SRVS "$MODULE_INCLUDES_TEMP_DIR" "$MODULE_PATH" "$MODULE_NAME"
 done
 
 rm -rf "$TEMP"

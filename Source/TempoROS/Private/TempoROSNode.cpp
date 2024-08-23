@@ -69,7 +69,6 @@ void UTempoROSNode::RemovePublisher(const FString& Topic)
 		UE_LOG(LogTempoROS, Error, TEXT("Node did not have publisher for Topic %s"), *Topic);
 		return;
 	}
-	UE_LOG(LogTemp, Warning, TEXT("RemovePublisher %s"), *Topic);
 	Publishers.Remove(Topic);
 }
 
