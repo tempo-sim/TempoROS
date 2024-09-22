@@ -5,6 +5,7 @@
 #include "TempoROSConversion.h"
 
 #include "TempoROSTypes.h"
+#include "TempoROSAllocator.h"
 
 #include "rclcpp.h"
 #include "image_transport/image_transport.hpp"
@@ -38,7 +39,18 @@ struct TTempoROSPublisher : FTempoROSPublisher
 	using ROSMessageType = typename TImplicitToROSConverter<MessageType>::ToType;
 	
 	TTempoROSPublisher(const IPublisherSupportInterface* PublisherSupport, const FString& Topic, const FROSQOSProfile& QOSProfile, bool bPrependNodeName)
-		: Node(PublisherSupport->GetNode()), Publisher(Node->create_publisher<ROSMessageType>(bPrependNodeName ? TCHAR_TO_UTF8(*PrependNodeName(Node, Topic)) : TCHAR_TO_UTF8(*Topic), QOSProfile.ToROS())) {}
+		: Node(PublisherSupport->GetNode())
+	{
+		UnrealMemoryResource mem_resource{};
+		auto alloc = std::make_shared<std::pmr::polymorphic_allocator<void>>(&mem_resource);
+		rclcpp::PublisherOptionsWithAllocator<std::pmr::polymorphic_allocator<void>> publisher_options;
+		publisher_options.allocator = alloc;
+		publisher_options.use_default_callbacks = false;
+		Publisher = Node->create_publisher<ROSMessageType>(
+		bPrependNodeName ? TCHAR_TO_UTF8(*PrependNodeName(Node, Topic)) : TCHAR_TO_UTF8(*Topic),
+			QOSProfile.ToROS(),
+			publisher_options);
+	}
 	
 	void Publish(const MessageType& Message) const
 	{
@@ -57,7 +69,7 @@ struct TTempoROSPublisher : FTempoROSPublisher
 
 private:
 	const std::shared_ptr<rclcpp::Node>& Node;
-	std::shared_ptr<rclcpp::Publisher<ROSMessageType>> Publisher;
+	std::shared_ptr<rclcpp::Publisher<ROSMessageType, std::pmr::polymorphic_allocator<void>>> Publisher;
 };
 
 template <ImageConvertible MessageType>

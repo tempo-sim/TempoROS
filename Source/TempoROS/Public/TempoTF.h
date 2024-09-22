@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include "TempoROSAllocator.h"
 #include "TempoROSConversion.h"
 #include "TempoROSTypes.h"
 #include "TempoROSCommonConverters.h"
@@ -50,35 +51,56 @@ struct TImplicitFromROSConverter<FStampedTransform> : TFromROSConverter<geometry
 struct FTempoStaticTFPublisher
 {
 	FTempoStaticTFPublisher(const std::shared_ptr<rclcpp::Node>& Node)
-		: Broadcaster(Node) {}
+	{
+		UnrealMemoryResource mem_resource{};
+		auto alloc = std::make_shared<std::pmr::polymorphic_allocator<void>>(&mem_resource);
+		rclcpp::PublisherOptionsWithAllocator<std::pmr::polymorphic_allocator<void>> publisher_options;
+		publisher_options.allocator = alloc;
+		publisher_options.use_default_callbacks = false;
+		Broadcaster = std::make_unique<tf2_ros::StaticTransformBroadcaster<std::pmr::polymorphic_allocator<void>>>(Node, tf2_ros::StaticBroadcasterQoS(), publisher_options);
+	}
 
 	void PublishTransform(const FStampedTransform& StampedTransform)
 	{
-		Broadcaster.sendTransform(TImplicitToROSConverter<FStampedTransform>::Convert(StampedTransform));
+		Broadcaster->sendTransform(TImplicitToROSConverter<FStampedTransform>::Convert(StampedTransform));
 	}
 	
 private:
-	tf2_ros::StaticTransformBroadcaster Broadcaster;
+	std::unique_ptr<tf2_ros::StaticTransformBroadcaster<std::pmr::polymorphic_allocator<void>>> Broadcaster;
 };
 
 struct FTempoDynamicTFPublisher
 {
 	FTempoDynamicTFPublisher(const std::shared_ptr<rclcpp::Node>& Node)
-		: Broadcaster(Node) {}
+	{
+		UnrealMemoryResource mem_resource{};
+		auto alloc = std::make_shared<std::pmr::polymorphic_allocator<void>>(&mem_resource);
+		rclcpp::PublisherOptionsWithAllocator<std::pmr::polymorphic_allocator<void>> publisher_options;
+		publisher_options.allocator = alloc;
+		publisher_options.use_default_callbacks = false;
+		Broadcaster = std::make_unique<tf2_ros::TransformBroadcaster<std::pmr::polymorphic_allocator<void>>>(Node, tf2_ros::DynamicBroadcasterQoS(), publisher_options);
+	}
 
 	void PublishTransform(const FStampedTransform& StampedTransform)
 	{
-		Broadcaster.sendTransform(TImplicitToROSConverter<FStampedTransform>::Convert(StampedTransform));
+		Broadcaster->sendTransform(TImplicitToROSConverter<FStampedTransform>::Convert(StampedTransform));
 	}
 	
 private:
-	tf2_ros::TransformBroadcaster Broadcaster;
+	std::unique_ptr<tf2_ros::TransformBroadcaster<std::pmr::polymorphic_allocator<void>>> Broadcaster;
 };
 
 struct FTempoTFListener
 {
 	FTempoTFListener(const std::shared_ptr<rclcpp::Node>& Node)
-		: Listener(Buffer, Node, true /*spin_thread*/) {}
+	{
+		UnrealMemoryResource mem_resource{};
+		auto alloc = std::make_shared<std::pmr::polymorphic_allocator<void>>(&mem_resource);
+		rclcpp::SubscriptionOptionsWithAllocator<std::pmr::polymorphic_allocator<void>> subscription_options;
+		subscription_options.allocator = alloc;
+		subscription_options.use_default_callbacks = false;
+		Listener = std::make_unique<tf2_ros::TransformListener<std::pmr::polymorphic_allocator<void>>>(Buffer, Node, false, tf2_ros::DynamicListenerQoS(), tf2_ros::StaticListenerQoS(), subscription_options, subscription_options);
+	}
 
 	FTransform GetTransform(const FString& FromFrame, const FString& ToFrame, const double Timestamp) const
 	{
@@ -95,6 +117,6 @@ struct FTempoTFListener
 	}
 
 private:
-	tf2_ros::TransformListener Listener;
+	std::unique_ptr<tf2_ros::TransformListener<std::pmr::polymorphic_allocator<void>>> Listener;
 	tf2::BufferCore Buffer;
 };
