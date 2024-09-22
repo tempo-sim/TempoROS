@@ -3,7 +3,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using UnrealBuildTool;
 
 public class rclcpp : ModuleRules
@@ -37,10 +36,9 @@ public class rclcpp : ModuleRules
 
         if (Target.Platform == UnrealTargetPlatform.Win64)
         {
-            // TODO: Is this correct on Windows?
-            LibraryPaths.AddRange(FindFilesInDirectory(Path.Combine(ModuleDirectory, "Libraries", "Windows"), "dll"));
-            RuntimeLibraryPaths.AddRange(FindFilesInDirectory(Path.Combine(ModuleDirectory, "Libraries", "Windows"), "dll"));
-            RuntimeLibraryPaths.AddRange(FindFilesInDirectory(Path.Combine(ModuleDirectory, "Libraries", "Windows", "share"), "*"));
+            LibraryPaths.AddRange(FindFilesInDirectory(Path.Combine(ModuleDirectory, "Libraries", "Windows"), "lib"));
+            RuntimeLibraryPaths.AddRange(FindFilesInDirectory(Path.Combine(ModuleDirectory, "Binaries", "Windows"), "dll"));
+            RuntimeLibraryPaths.AddRange(FindFilesInDirectory(Path.Combine(ModuleDirectory, "Binaries", "Windows", "share"), "*"));
         }
         else if (Target.Platform == UnrealTargetPlatform.Mac)
         {
@@ -71,6 +69,7 @@ public class rclcpp : ModuleRules
         ModuleDepPaths moduleDepPaths = GatherDeps();
         PublicIncludePaths.AddRange(moduleDepPaths.HeaderPaths);
         PublicAdditionalLibraries.AddRange(moduleDepPaths.LibraryPaths);
+        PublicRuntimeLibraryPaths.Add(Path.Combine(ModuleDirectory, "Binaries", "Windows"));
         foreach (string libraryPath in moduleDepPaths.RuntimeLibraryPaths)
         {
             RuntimeDependencies.Add(libraryPath);
@@ -85,15 +84,25 @@ public class rclcpp : ModuleRules
         
         if (Target.Platform == UnrealTargetPlatform.Linux)
         {
-            // TODO: Is this needed on Windows?
             PublicDefinitions.Add("_LIBCPP_HAS_NO_RTTI=1");
+        }
+
+        if (Target.Platform == UnrealTargetPlatform.Win64)
+        {
+            PublicDefinitions.Add("EPROSIMA_ALL_DYN_LINK=1");
+            // Either of these supposedly silence a build warning. But they do not actually work.
+            // https://developercommunity.visualstudio.com/t/unable-to-remove-warning-for-cxx17-deprecated-feat/273815
+            // PublicDefinitions.Add("_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS=1");
+            // PublicDefinitions.Add("_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING=1");
+            PrivateDefinitions.Add("ROSIDL_TYPESUPPORT_CPP_BUILDING_DLL=1");
+            PrivateDefinitions.Add("ROSIDL_TYPESUPPORT_INTROSPECTION_CPP_BUILDING_DLL=1");
         }
 
         PublicDefinitions.Add("RCLCPP_INTRA_PROCESS_DISABLED=1");
 
         // rclcpp and all modules that depend on it must enable exceptions.
         bEnableExceptions = true;
-        
+
         AddEngineThirdPartyPrivateStaticDependencies(Target, "OpenSSL");
         AddEngineThirdPartyPrivateStaticDependencies(Target, "zlib");
         AddEngineThirdPartyPrivateStaticDependencies(Target, "UElibPNG");
