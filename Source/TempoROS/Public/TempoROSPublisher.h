@@ -11,6 +11,14 @@
 #include "image_transport/image_transport.hpp"
 #include "sensor_msgs/msg/image.hpp"
 
+inline rclcpp::PublisherOptions TempoROSPublisherOptions()
+{
+	rclcpp::PublisherOptionsWithAllocator<std::pmr::polymorphic_allocator<void>> PublisherOptions;
+	PublisherOptions.allocator = GetPolymorphicUnrealAllocator();
+	PublisherOptions.use_default_callbacks = false;
+	return PublisherOptions;
+}
+
 static FString PrependNodeName(const std::shared_ptr<rclcpp::Node>& Node, const FString& Topic)
 {
 	return FString::Printf(TEXT("%s/%s"), UTF8_TO_TCHAR(Node->get_name()), *Topic);
@@ -41,15 +49,10 @@ struct TTempoROSPublisher : FTempoROSPublisher
 	TTempoROSPublisher(const IPublisherSupportInterface* PublisherSupport, const FString& Topic, const FROSQOSProfile& QOSProfile, bool bPrependNodeName)
 		: Node(PublisherSupport->GetNode())
 	{
-		UnrealMemoryResource mem_resource{};
-		auto alloc = std::make_shared<std::pmr::polymorphic_allocator<void>>(&mem_resource);
-		rclcpp::PublisherOptionsWithAllocator<std::pmr::polymorphic_allocator<void>> publisher_options;
-		publisher_options.allocator = alloc;
-		publisher_options.use_default_callbacks = false;
 		Publisher = Node->create_publisher<ROSMessageType>(
 		bPrependNodeName ? TCHAR_TO_UTF8(*PrependNodeName(Node, Topic)) : TCHAR_TO_UTF8(*Topic),
 			QOSProfile.ToROS(),
-			publisher_options);
+			TempoROSPublisherOptions());
 	}
 	
 	void Publish(const MessageType& Message) const

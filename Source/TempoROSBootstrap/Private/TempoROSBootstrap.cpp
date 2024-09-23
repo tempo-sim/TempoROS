@@ -1,46 +1,29 @@
-﻿#include "TempoROSBootstrap.h"
+﻿// Copyright Tempo Simulation, LLC. All Rights Reserved
+
+#include "TempoROSBootstrap.h"
 
 #include "Interfaces/IPluginManager.h"
 
 #define LOCTEXT_NAMESPACE "FTempoROSBootstrapModule"
 
-FString GetTempoROSPluginPath()
+FString GetTempoROSDllDirectory()
 {
-	return IPluginManager::Get().FindPlugin(TEXT("TempoROS"))->GetBaseDir();
-}
-
-void FTempoROSBootstrapModule::LoadROSDlls()
-{
-	const FString TempoROSPluginPath = GetTempoROSPluginPath();
-	UE_LOG(LogTemp, Warning, TEXT("TempoROSPluginPath: %s"), *TempoROSPluginPath);
-	const FString rclcppPath = FPaths::Combine(TempoROSPluginPath, TEXT("Source"), TEXT("ThirdParty"), TEXT("rclcpp"), TEXT("Binaries"), TEXT("Windows"));
-	// TArray<FString> rclcppDLLPaths;
-	// IFileManager::Get().FindFilesRecursive(rclcppDLLPaths, *TempoROSPluginPath, TEXT("*.dll"), true, false);
-	FPlatformProcess::PushDllDirectory(*rclcppPath);
-	// for (const FString& rclcppDLLPath : rclcppDLLPaths)
-	// {
-	// 	UE_LOG(LogTemp, Warning, TEXT("Loading %s"), *rclcppDLLPath);
-	// 	ROSDLLHandles.Add(FPlatformProcess::GetDllHandle(*rclcppDLLPath));
-	// }
-}
-
-void FTempoROSBootstrapModule::UnloadROSDlls()
-{
-	for (void* rclcppDllHandle : ROSDLLHandles)
-	{
-		FPlatformProcess::FreeDllHandle(rclcppDllHandle);
-	}
-	ROSDLLHandles.Empty();
+	const FString TempoROSPluginPath = IPluginManager::Get().FindPlugin(TEXT("TempoROS"))->GetBaseDir();
+	return FPaths::Combine(TempoROSPluginPath, TEXT("Source"), TEXT("ThirdParty"), TEXT("rclcpp"), TEXT("Binaries"), TEXT("Windows"));
 }
 
 void FTempoROSBootstrapModule::StartupModule()
 {
-    LoadROSDlls();
+#if PLATFORM_WINDOWS
+	FPlatformProcess::PushDllDirectory(*GetTempoROSDllDirectory());
+#endif
 }
 
 void FTempoROSBootstrapModule::ShutdownModule()
 {
-    UnloadROSDlls();
+#if PLATFORM_WINDOWS
+	FPlatformProcess::PopDllDirectory(*GetTempoROSDllDirectory());
+#endif
 }
 
 #undef LOCTEXT_NAMESPACE

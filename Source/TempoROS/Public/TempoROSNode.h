@@ -34,7 +34,7 @@ public:
 	static UTempoROSNode* Create(const FString& NodeName,
 								 UObject* Outer=GetTransientPackage(),
 							     bool bAutoTick=true,
-							     const rclcpp::NodeOptions& NodeOptions=rclcpp::NodeOptions());
+							     const rclcpp::NodeOptions& NodeOptions=rclcpp::NodeOptions(GetUnrealAllocator()));
 
 	const TMap<FString, std::unique_ptr<FTempoROSPublisher>>& GetPublishers() const { return Publishers; }
 
@@ -169,7 +169,7 @@ private:
 	std::shared_ptr<rclcpp::Node> Node = nullptr;
 	std::unique_ptr<image_transport::ImageTransport> ImageTransport;
 
-	std::unique_ptr<FTempoStaticTFPublisher> StaticTFPublisher;
-	std::unique_ptr<FTempoDynamicTFPublisher> DynamicTFPublisher;
-	std::unique_ptr<FTempoTFListener> TFListener;
+	TUniquePtr<FTempoStaticTFPublisher> StaticTFPublisher;
+	TUniquePtr<FTempoDynamicTFPublisher> DynamicTFPublisher;
+	TUniquePtr<FTempoTFListener> TFListener;
 };

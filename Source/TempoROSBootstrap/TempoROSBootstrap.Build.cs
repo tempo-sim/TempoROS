@@ -1,4 +1,6 @@
-﻿using UnrealBuildTool;
+﻿// Copyright Tempo Simulation, LLC. All Rights Reserved
+
+using UnrealBuildTool;
 
 public class TempoROSBootstrap : ModuleRules
 {
@@ -16,10 +18,6 @@ public class TempoROSBootstrap : ModuleRules
         PrivateDependencyModuleNames.AddRange(
             new string[]
             {
-                "CoreUObject",
-                "Engine",
-                "Slate",
-                "SlateCore",
                 "Projects"
             }
         );

@@ -8,6 +8,21 @@
 
 #include "rclcpp.h"
 
+inline rclcpp::SubscriptionOptions TempoROSSubscriptionOptions(const std::shared_ptr<std::pmr::polymorphic_allocator<void>>& Allocator)
+{
+	rclcpp::SubscriptionOptionsWithAllocator<std::pmr::polymorphic_allocator<void>> SubscriptionOptions;
+	SubscriptionOptions.allocator = Allocator;
+	SubscriptionOptions.use_default_callbacks = false;
+	return SubscriptionOptions;
+}
+
+template <typename ROSMessageType>
+inline std::shared_ptr<rclcpp::message_memory_strategy::MessageMemoryStrategy<ROSMessageType, std::pmr::polymorphic_allocator<void>>>
+TempoROSSubscriptionMemoryStrategy(const std::shared_ptr<std::pmr::polymorphic_allocator<void>>& Allocator)
+{
+	return std::make_shared<rclcpp::message_memory_strategy::MessageMemoryStrategy<ROSMessageType, std::pmr::polymorphic_allocator<void>>>(Allocator);
+}
+
 template <class MessageType>
 using TROSSubscriptionDelegate = TDelegate<void(const MessageType&)>;
 
@@ -23,12 +38,7 @@ struct TEMPOROS_API TTempoROSSubscription : FTempoROSSubscription
 	
 	TTempoROSSubscription(const std::shared_ptr<rclcpp::Node>& Node, const FString& Topic, const TROSSubscriptionDelegate<MessageType>& Callback)
 	{
-		UnrealMemoryResource mem_resource{};
-		auto alloc = std::make_shared<std::pmr::polymorphic_allocator<void>>(&mem_resource);
-		rclcpp::SubscriptionOptionsWithAllocator<std::pmr::polymorphic_allocator<void>> subscription_options;
-		subscription_options.allocator = alloc;
-		subscription_options.use_default_callbacks = false;
-		auto msg_mem_strat = std::make_shared<rclcpp::message_memory_strategy::MessageMemoryStrategy<ROSMessageType, std::pmr::polymorphic_allocator<void>>>(alloc);
+		std::shared_ptr<std::pmr::polymorphic_allocator<void>> Allocator = GetPolymorphicUnrealAllocator();
 		Subscription = Node->create_subscription<ROSMessageType>(
 			TCHAR_TO_UTF8(*Topic),
 			10,
@@ -36,8 +46,8 @@ struct TEMPOROS_API TTempoROSSubscription : FTempoROSSubscription
 			{
 			  Callback.ExecuteIfBound(TImplicitFromROSConverter<MessageType>::Convert(Message));
 			},
-			subscription_options,
-			msg_mem_strat);
+			TempoROSSubscriptionOptions(Allocator),
+			TempoROSSubscriptionMemoryStrategy<ROSMessageType>(Allocator));
 	}
 	
 private:

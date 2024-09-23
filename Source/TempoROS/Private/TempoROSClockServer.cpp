@@ -6,7 +6,7 @@
 
 #include "rosgraph_msgs/msg/clock.hpp"
 
-DEFINE_TEMPOROS_MESSAGE_TYPE_TRAITS(double)
+// DEFINE_TEMPOROS_MESSAGE_TYPE_TRAITS(double)
 
 template <>
 struct TImplicitToROSConverter<double> : TToROSConverter<rosgraph_msgs::msg::Clock, double>

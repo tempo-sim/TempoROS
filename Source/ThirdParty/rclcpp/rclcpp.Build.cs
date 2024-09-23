@@ -37,10 +37,10 @@ public class rclcpp : ModuleRules
 
         if (Target.Platform == UnrealTargetPlatform.Win64)
         {
-            // TODO: Is this correct on Windows?
-            LibraryPaths.AddRange(FindFilesInDirectory(Path.Combine(ModuleDirectory, "Libraries", "Windows"), "dll"));
+            LibraryPaths.AddRange(FindFilesInDirectory(Path.Combine(ModuleDirectory, "Libraries", "Windows"), "lib"));
             RuntimeLibraryPaths.AddRange(FindFilesInDirectory(Path.Combine(ModuleDirectory, "Libraries", "Windows"), "dll"));
             RuntimeLibraryPaths.AddRange(FindFilesInDirectory(Path.Combine(ModuleDirectory, "Libraries", "Windows", "share"), "*"));
+            
         }
         else if (Target.Platform == UnrealTargetPlatform.Mac)
         {
