@@ -59,13 +59,13 @@ BP_INCLUDE_TEMPLATE=\
 BP_PUBLISHER_TEMPLATE=\
 "
     UFUNCTION(BlueprintCallable, Category = \"TempoROS\", meta=(AutoCreateRefTerm=\"QOSProfile\"))
-    static void Add__SANITIZEDMESSAGETYPE__Publisher(UTempoROSNode* Node, const FString& Topic, const FROSQOSProfile& QOSProfile=FROSQOSProfile(), bool bPrependNodeName=true)
+    static void Add__SANITIZEDMESSAGETYPE__Publisher(UTempoROSNode* Node, const FString\& Topic, const FROSQOSProfile\& QOSProfile=FROSQOSProfile(), bool bPrependNodeName=true)
     {
         Node->AddPublisher<__MESSAGETYPE__>(Topic, QOSProfile, bPrependNodeName);
     }
 
     UFUNCTION(BlueprintCallable, Category = \"TempoROS\")
-    static void Publish__SANITIZEDMESSAGETYPE__(UTempoROSNode* Node, const FString& Topic, const __MESSAGETYPE__& Message)
+    static void Publish__SANITIZEDMESSAGETYPE__(UTempoROSNode* Node, const FString\& Topic, const __MESSAGETYPE__\& Message)
     {
         Node->Publish<__MESSAGETYPE__>(Topic, Message);
     }
@@ -79,9 +79,9 @@ DECLARE_DYNAMIC_DELEGATE_OneParam(FTempoROS__SANITIZEDMESSAGETYPE__Received, __M
 BP_SUBSCRIPTION_TEMPLATE=\
 "
     UFUNCTION(BlueprintCallable, Category = "TempoROS")
-    static void Add__SANITIZEDMESSAGETYPE__Subscription(UTempoROSNode* Node, const FString& Topic, const FTempoROS__SANITIZEDMESSAGETYPE__Received& TempoROSMessageReceivedEvent)
+    static void Add__SANITIZEDMESSAGETYPE__Subscription(UTempoROSNode* Node, const FString\& Topic, const FTempoROS__SANITIZEDMESSAGETYPE__Received\& TempoROSMessageReceivedEvent)
     {
-        Node->AddSubscription<__MESSAGETYPE__>(Topic, TROSSubscriptionDelegate<__MESSAGETYPE__>::CreateLambda([TempoROSMessageReceivedEvent](const __MESSAGETYPE__& Value)
+        Node->AddSubscription<__MESSAGETYPE__>(Topic, TROSSubscriptionDelegate<__MESSAGETYPE__>::CreateLambda([TempoROSMessageReceivedEvent](const __MESSAGETYPE__\& Value)
         {
             TempoROSMessageReceivedEvent.ExecuteIfBound(Value);
         }));

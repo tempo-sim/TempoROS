@@ -301,14 +301,16 @@ fi
 eval "$DOTNET" "./Binaries/DotNET/UnrealBuildTool/UnrealBuildTool.dll" -Mode=JsonExport "$TARGET_NAME" "$TARGET_PLATFORM" "$TARGET_CONFIG" -Project="$PROJECT_FILE" -OutputFile="$TEMP/TempoModules.json" -NoMutex > /dev/null 2>&1
 JSON_DATA=$(cat "$TEMP/TempoModules.json")
 # Extract the public and private dependencies of all C++ project modules.
-FILTERED_MODULES=$(echo "$JSON_DATA" | jq --arg project_root "$PROJECT_ROOT" '.Modules | to_entries[] | select(.value.Type == "CPlusPlus") | select(.value.Directory | startswith($project_root)) | {(.key): {Directory: .value.Directory, PublicDependencyModules: .value.PublicDependencyModules, PrivateDependencyModules: .value.PrivateDependencyModules}}')
+FILTERED_MODULES=$(echo "$JSON_DATA" | jq --arg project_root "$PROJECT_ROOT" 'def normalize_path: gsub("\\\\"; "/") | if startswith("/") then . else "/" + . end; .Modules | to_entries[] | select(.value.Type == "CPlusPlus") | select((.value.Directory | normalize_path) | startswith($project_root | normalize_path)) | {(.key): {Directory: .value.Directory, PublicDependencyModules: .value.PublicDependencyModules, PrivateDependencyModules: .value.PrivateDependencyModules}}')
 MODULE_INFO=$(echo "$FILTERED_MODULES" | jq -s 'add')
 
 # Then iterate through all the modules to:
 # - Copy all ROS IDL files to a temp source directory - one per module!
 # - Check that no module names are repeated
 # - Check that all ROS IDL files are in the correct locations
-echo "$MODULE_INFO" | jq -r -c 'to_entries[] | .key  + " " + .value.Directory' | while read MODULE_NAME MODULE_PATH; do
+echo "$MODULE_INFO" | jq -r -c 'to_entries[] | [.key, (.value.Directory // "")] | @tsv' | while IFS=$'\t' read -r MODULE_NAME MODULE_PATH; do
+  # Remove surrounding single quotes and replace any \\ with /
+  MODULE_PATH=$(echo "$MODULE_PATH" | sed 's/^"//; s/"$//; s/\\\\/\//g')
   MODULE_SRC_TEMP_DIR="$SRC_TEMP_DIR/$MODULE_NAME"
   if [ -d "$MODULE_SRC_TEMP_DIR" ]; then
     echo "Multiple modules named $MODULE_NAME found. Please rename one."
@@ -380,6 +382,8 @@ GET_MODULE_INCLUDES_PUBLIC_ONLY() {
   local INCLUDES_DIR="$2"
   PUBLIC_DEPENDENCIES=$(echo "$MODULE_INFO" | jq -r --arg module_name "$MODULE_NAME" '.[$module_name] | try .PublicDependencyModules[] // []')
   for PUBLIC_DEPENDENCY in $PUBLIC_DEPENDENCIES; do
+    # Remove any trailing carriage return character
+    PUBLIC_DEPENDENCY="${PUBLIC_DEPENDENCY%$'\r'}"
     if [ -d "$SRC_TEMP_DIR/$PUBLIC_DEPENDENCY" ]; then # Only consider project modules
       if [ -d "$INCLUDES_DIR/$PUBLIC_DEPENDENCY" ]; then
         # We already have this dependency - but still add its public dependencies.
@@ -394,7 +398,7 @@ GET_MODULE_INCLUDES_PUBLIC_ONLY() {
   done
 }
 
-GET_MODULE_INCLUDES() {  
+GET_MODULE_INCLUDES() {
   local MODULE_NAME="$1"
   local INCLUDES_DIR="$2"
   # First copy everything from this modules public and private folders.
@@ -404,6 +408,8 @@ GET_MODULE_INCLUDES() {
   PUBLIC_DEPENDENCIES=$(echo "$MODULE_INFO" | jq -r --arg module_name "$MODULE_NAME" '.[$module_name] | try .PublicDependencyModules[] // []')
   PRIVATE_DEPENDENCIES=$(echo "$MODULE_INFO" | jq -r --arg module_name "$MODULE_NAME" '.[$module_name] | try .PrivateDependencyModules[] // []')
   for PUBLIC_DEPENDENCY in $PUBLIC_DEPENDENCIES; do
+    # Remove any trailing carriage return character
+    PUBLIC_DEPENDENCY="${PUBLIC_DEPENDENCY%$'\r'}"
     if [ -d "$SRC_TEMP_DIR/$PUBLIC_DEPENDENCY" ]; then # Only consider project modules
       if [ -d "$INCLUDES_DIR/$PUBLIC_DEPENDENCY" ]; then
         # We already have this dependency - but still add its public dependencies.
@@ -417,7 +423,9 @@ GET_MODULE_INCLUDES() {
     fi
   done
 
-  for PRIVATE_DEPENDENCY in $PRIVATE_DEPENDENCIES; do   
+  for PRIVATE_DEPENDENCY in $PRIVATE_DEPENDENCIES; do
+    # Remove any trailing carriage return character
+    PRIVATE_DEPENDENCY="${PRIVATE_DEPENDENCY%$'\r'}"
     if [[ -d "$SRC_TEMP_DIR/$PRIVATE_DEPENDENCY" ]]; then # Only consider project modules
       if [[ -d "$INCLUDES_DIR/$PRIVATE_DEPENDENCY" ]]; then
         # We already have this dependency - but still add its public dependencies.
@@ -432,13 +440,12 @@ GET_MODULE_INCLUDES() {
   done
 }
 
-# Lastly, iterate over all the modules again to generate the ROS IDL code
-echo "$MODULE_INFO" | jq -r -c 'to_entries[] | .key  + " " + .value.Directory' | while read MODULE_NAME MODULE_PATH; do
-  if echo "$MODULE_INFO" | jq --arg module_name "$MODULE_NAME" -e '.[$module_name]' > /dev/null; then
-    MODULE_INCLUDES_TEMP_DIR="$INCLUDES_TEMP_DIR/$MODULE_NAME"
-    GET_MODULE_INCLUDES "$MODULE_NAME" "$MODULE_INCLUDES_TEMP_DIR"
-    GEN_MODULE_MSG_AND_SRVS "$MODULE_INCLUDES_TEMP_DIR" "$MODULE_PATH" "$MODULE_NAME"
-  fi
+echo "$MODULE_INFO" | jq -r -c 'to_entries[] | [.key, (.value.Directory // "")] | @tsv' | while IFS=$'\t' read -r MODULE_NAME MODULE_PATH; do
+  # Remove surrounding single quotes and replace any \\ with /
+  MODULE_PATH=$(echo "$MODULE_PATH" | sed 's/^"//; s/"$//; s/\\\\/\//g')
+  MODULE_INCLUDES_TEMP_DIR="$INCLUDES_TEMP_DIR/$MODULE_NAME"
+  GET_MODULE_INCLUDES "$MODULE_NAME" "$MODULE_INCLUDES_TEMP_DIR"
+  GEN_MODULE_MSG_AND_SRVS "$MODULE_INCLUDES_TEMP_DIR" "$MODULE_PATH" "$MODULE_NAME"
 done
 
 rm -rf "$TEMP"
