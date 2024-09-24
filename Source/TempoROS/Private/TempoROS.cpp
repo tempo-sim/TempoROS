@@ -58,7 +58,8 @@ void SetAmentPrefixPath()
 	FPaths::CollapseRelativeDirectories(LibDir);
 	checkf(FPaths::DirectoryExists(*LibDir), TEXT("rclcpp library directory %s did not exist"), *LibDir);
 #if PLATFORM_WINDOWS
-	_putenv_s(TCHAR_TO_UTF8(TEXT("AMENT_PREFIX_PATH")),TCHAR_TO_UTF8(*LibDir));
+	// On Windows only, SetEnvironmentVar does not seem to work properly, but this does.
+	_putenv_s(TCHAR_TO_UTF8(TEXT("AMENT_PREFIX_PATH")), TCHAR_TO_UTF8(*LibDir));
 #else
 	FPlatformMisc::SetEnvironmentVar(TCHAR_TO_UTF8(TEXT("AMENT_PREFIX_PATH")), TCHAR_TO_UTF8(*LibDir));
 #endif

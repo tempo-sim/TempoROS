@@ -1,8 +1,5 @@
 ﻿// Copyright Tempo Simulation, LLC. All Rights Reserved
 
-using System;
-using System.Collections.Generic;
-using System.IO;
 using UnrealBuildTool;
 
 public class TempoROS : ModuleRules
@@ -10,7 +7,7 @@ public class TempoROS : ModuleRules
 	public TempoROS(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
-
+		
 		PublicDependencyModuleNames.AddRange(
 			new string[]
 			{
@@ -30,8 +27,8 @@ public class TempoROS : ModuleRules
 				"Engine",
 				"Slate",
 				"SlateCore",
-                // Tempo
-                "TempoROSBootstrap",
+				// Tempo
+				"TempoROSBootstrap",
 			}
 			);
 		

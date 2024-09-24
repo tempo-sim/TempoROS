@@ -2,9 +2,8 @@
 
 #pragma once
 
-#include "TempoROSConversion.h"
-
 #include "TempoROSAllocator.h"
+#include "TempoROSConversion.h"
 
 #include "rclcpp.h"
 
@@ -17,10 +16,10 @@ inline rclcpp::SubscriptionOptions TempoROSSubscriptionOptions(const std::shared
 }
 
 template <typename ROSMessageType>
-inline std::shared_ptr<rclcpp::message_memory_strategy::MessageMemoryStrategy<ROSMessageType, std::pmr::polymorphic_allocator<void>>>
+inline std::shared_ptr<rclcpp::message_memory_strategy::MessageMemoryStrategy<ROSMessageType>>
 TempoROSSubscriptionMemoryStrategy(const std::shared_ptr<std::pmr::polymorphic_allocator<void>>& Allocator)
 {
-	return std::make_shared<rclcpp::message_memory_strategy::MessageMemoryStrategy<ROSMessageType, std::pmr::polymorphic_allocator<void>>>(Allocator);
+	return std::make_shared<rclcpp::message_memory_strategy::MessageMemoryStrategy<ROSMessageType>>(Allocator);
 }
 
 template <class MessageType>
@@ -41,7 +40,7 @@ struct TEMPOROS_API TTempoROSSubscription : FTempoROSSubscription
 		std::shared_ptr<std::pmr::polymorphic_allocator<void>> Allocator = GetPolymorphicUnrealAllocator();
 		Subscription = Node->create_subscription<ROSMessageType>(
 			TCHAR_TO_UTF8(*Topic),
-			10,
+			0,
 			[Callback](const ROSMessageType& Message)
 			{
 			  Callback.ExecuteIfBound(TImplicitFromROSConverter<MessageType>::Convert(Message));
@@ -51,5 +50,5 @@ struct TEMPOROS_API TTempoROSSubscription : FTempoROSSubscription
 	}
 	
 private:
-	std::shared_ptr<rclcpp::Subscription<ROSMessageType, std::pmr::polymorphic_allocator<void>>> Subscription;
+	std::shared_ptr<rclcpp::Subscription<ROSMessageType>> Subscription;
 };

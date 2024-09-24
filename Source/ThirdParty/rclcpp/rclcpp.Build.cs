@@ -78,8 +78,7 @@ public class rclcpp : ModuleRules
         PrivateDependencyModuleNames.AddRange(
             new string[]
             {
-                "Core",
-                "Projects"
+                "Core"
             }
             );
         

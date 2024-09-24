@@ -5,8 +5,12 @@
 #include "CoreMinimal.h"
 #include "Modules/ModuleManager.h"
 
-// Since Windows dynamic linking involves linking symbols via a .lib interface but then loading them at runtime
-// via a .dll, we must explicitly add TempoROS's third party Dll directory before loading the TempoROS module.
+// ROS uses runtime dynamic linking of dlls. It won't be able to find those dlls at
+// runtime unless their containing directory is on the user's PATH variable. In the
+// packaged game, adding the TempoROS/Source/ThirdParty/rclcpp/Binaries/Windows directory
+// to the user's PATH is the only solution. However in the Editor, where modules are
+// loaded as individual dlls, we can use this special "bootsttrap" module to effectively
+// add that directory to the PATH for the user *before* TempoROS module is loaded.
 class FTempoROSBootstrapModule : public IModuleInterface
 {
 public:

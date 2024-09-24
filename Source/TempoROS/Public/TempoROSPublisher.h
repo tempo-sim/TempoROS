@@ -4,8 +4,8 @@
 
 #include "TempoROSConversion.h"
 
-#include "TempoROSTypes.h"
 #include "TempoROSAllocator.h"
+#include "TempoROSTypes.h"
 
 #include "rclcpp.h"
 #include "image_transport/image_transport.hpp"
@@ -72,7 +72,7 @@ struct TTempoROSPublisher : FTempoROSPublisher
 
 private:
 	const std::shared_ptr<rclcpp::Node>& Node;
-	std::shared_ptr<rclcpp::Publisher<ROSMessageType, std::pmr::polymorphic_allocator<void>>> Publisher;
+	std::shared_ptr<rclcpp::Publisher<ROSMessageType>> Publisher;
 };
 
 template <ImageConvertible MessageType>

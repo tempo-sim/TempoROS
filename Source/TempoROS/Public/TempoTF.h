@@ -16,7 +16,7 @@ struct FStampedTransform
 {
 	FStampedTransform(double TimestampIn, const FString& FromFrameIn, const FString& ToFrameIn, const FTransform& TransformIn)
 		: Timestamp(TimestampIn), FromFrame(FromFrameIn), ToFrame(ToFrameIn), Transform(TransformIn) {}
-	
+
 	double Timestamp;
 	FString FromFrame;
 	FString ToFrame;
@@ -52,42 +52,35 @@ struct TImplicitFromROSConverter<FStampedTransform> : TFromROSConverter<geometry
 struct FTempoStaticTFPublisher
 {
 	FTempoStaticTFPublisher(const std::shared_ptr<rclcpp::Node>& Node)
+		: Broadcaster(Node, tf2_ros::DynamicBroadcasterQoS(), TempoROSPublisherOptions()) {}
+
+	void PublishTransform(const FStampedTransform& StampedTransform)
 	{
-		Broadcaster = std::make_unique<tf2_ros::StaticTransformBroadcaster>(Node, tf2_ros::StaticBroadcasterQoS(), TempoROSPublisherOptions());
+		Broadcaster.sendTransform(TImplicitToROSConverter<FStampedTransform>::Convert(StampedTransform));
 	}
 
-	void PublishTransform(const FStampedTransform& StampedTransform) const
-	{
-		Broadcaster->sendTransform(TImplicitToROSConverter<FStampedTransform>::Convert(StampedTransform));
-	}
-	
 private:
-	std::unique_ptr<tf2_ros::StaticTransformBroadcaster> Broadcaster;
+	tf2_ros::StaticTransformBroadcaster Broadcaster;
 };
 
 struct FTempoDynamicTFPublisher
 {
 	FTempoDynamicTFPublisher(const std::shared_ptr<rclcpp::Node>& Node)
+		: Broadcaster(Node, tf2_ros::DynamicBroadcasterQoS(), TempoROSPublisherOptions()) {}
+
+	void PublishTransform(const FStampedTransform& StampedTransform)
 	{
-		Broadcaster = std::make_unique<tf2_ros::TransformBroadcaster>(Node, tf2_ros::DynamicBroadcasterQoS(), TempoROSPublisherOptions());
+		Broadcaster.sendTransform(TImplicitToROSConverter<FStampedTransform>::Convert(StampedTransform));
 	}
 
-	void PublishTransform(const FStampedTransform& StampedTransform) const
-	{
-		Broadcaster->sendTransform(TImplicitToROSConverter<FStampedTransform>::Convert(StampedTransform));
-	}
-	
 private:
-	std::unique_ptr<tf2_ros::TransformBroadcaster> Broadcaster;
+	tf2_ros::TransformBroadcaster Broadcaster;
 };
 
 struct FTempoTFListener
 {
 	FTempoTFListener(const std::shared_ptr<rclcpp::Node>& Node)
-	{
-		rclcpp::SubscriptionOptions SubscriptionOptions = TempoROSSubscriptionOptions(GetPolymorphicUnrealAllocator());
-		Listener = std::make_unique<tf2_ros::TransformListener>(Buffer, Node, false, tf2_ros::DynamicListenerQoS(), tf2_ros::StaticListenerQoS(), SubscriptionOptions, SubscriptionOptions);
-	}
+		: Listener(Buffer, Node, false, tf2_ros::DynamicListenerQoS(), tf2_ros::DynamicListenerQoS(), TempoROSSubscriptionOptions(GetPolymorphicUnrealAllocator()), TempoROSSubscriptionOptions(GetPolymorphicUnrealAllocator())) {}
 
 	FTransform GetTransform(const FString& FromFrame, const FString& ToFrame, const double Timestamp) const
 	{
@@ -104,6 +97,6 @@ struct FTempoTFListener
 	}
 
 private:
-	std::unique_ptr<tf2_ros::TransformListener> Listener;
+	tf2_ros::TransformListener Listener;
 	tf2::BufferCore Buffer;
 };
