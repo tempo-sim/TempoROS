@@ -6,12 +6,6 @@
 
 set -e
 
-# Must have the proper GitHub PAT in your ~/.netrc
-if [ ! -f "$HOME/.netrc" ]; then
-  echo "~/.netrc file not found. A .netrc file with the GitHub PAT is required"
-  exit 1
-fi
-
 # Check for jq
 if ! which jq &> /dev/null; then
   echo "Couldn't find jq"
@@ -22,6 +16,44 @@ if ! which jq &> /dev/null; then
   elif [[ "$OSTYPE" = "linux-gnu"* ]]; then
     echo "Install (on Linux): sudo apt-get install jq"
   fi
+  exit 1
+fi
+
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+TEMPOROS_ROOT=$(realpath "$SCRIPT_DIR/..")
+
+FIND_UPROJECT() {
+    local START_DIR
+    START_DIR=$(dirname "$1")
+    local CURRENT_DIR="$START_DIR"
+    
+    while [[ "$CURRENT_DIR" != "/" ]]; do
+        local UPROJECT_FILE
+        UPROJECT_FILE=$(find "$CURRENT_DIR" -maxdepth 1 -name "*.uproject" -print -quit)
+        if [[ -n "$UPROJECT_FILE" ]]; then
+            echo "$UPROJECT_FILE"
+            return 0
+        fi
+        CURRENT_DIR=$(dirname "$CURRENT_DIR")
+    done
+    
+    echo "No .uproject file found" >&2
+    return 1
+}
+
+UPROJECT_FILE=$(FIND_UPROJECT "$TEMPOROS_ROOT")
+
+TEMPOROS_ENABLED=$(jq '.Plugins[] | select(.Name=="TempoROS") | .Enabled' "$UPROJECT_FILE")
+# Remove any trailing carriage return character
+TEMPOROS_ENABLED="${TEMPOROS_ENABLED%$'\r'}"
+if [ "$TEMPOROS_ENABLED" != "true" ]; then
+  echo -e "Skipping check of TempoROS ThirdParty dependencies because TempoROS plugin is not enabled in $(basename "$UPROJECT_FILE")"
+  exit 0
+fi
+
+# Must have the proper GitHub PAT in your ~/.netrc
+if [ ! -f "$HOME/.netrc" ]; then
+  echo "~/.netrc file not found. A .netrc file with the GitHub PAT is required"
   exit 1
 fi
 
@@ -135,9 +167,7 @@ SYNC_THIRD_PARTY_DEPS () {
   echo "New hash: $MEASURED_HASH"
 }
 
-SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-TEMPO_ROOT=$(realpath "$SCRIPT_DIR/..")
-MANIFEST_FILES=$(find "$TEMPO_ROOT" -name ttp_manifest.json -path "*Source*")
+MANIFEST_FILES=$(find "$TEMPOROS_ROOT" -name ttp_manifest.json -path "*Source*")
 for MANIFEST_FILE in ${MANIFEST_FILES[@]}; do
   SYNC_THIRD_PARTY_DEPS "$MANIFEST_FILE" "$1"
 done
