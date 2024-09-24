@@ -5,11 +5,14 @@
 template <typename MessageType>
 struct TMessageTypeTraits
 {
-	static inline FName MessageTypeDescriptor = FName(NAME_None);
+	static FName MessageTypeDescriptor;
 };
 
+template <typename MessageType>
+FName TMessageTypeTraits<MessageType>::MessageTypeDescriptor = FName(NAME_None);
+
 #define DEFINE_TEMPOROS_MESSAGE_TYPE_TRAITS(MessageType) \
-template <> inline FName TMessageTypeTraits<MessageType>::MessageTypeDescriptor = FName(#MessageType);
+template <> FName TMessageTypeTraits<MessageType>::MessageTypeDescriptor = FName(#MessageType);
 
 template <typename T>
 struct TConverter

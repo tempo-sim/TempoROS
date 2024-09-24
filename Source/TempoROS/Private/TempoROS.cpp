@@ -11,7 +11,6 @@
 #define LOCTEXT_NAMESPACE "FTempoROSModule"
 
 #include "rclcpp/utilities.hpp"
-#include "rclcpp/logger.hpp"
 
 DEFINE_LOG_CATEGORY(LogTempoROS);
 
@@ -51,16 +50,24 @@ void SetAmentPrefixPath()
 #else
 	checkf(false, TEXT("Unsupported platform"));
 #endif
+#if PLATFORM_WINDOWS
+	FString LibDir = FPaths::Combine(rclcppDir, "Binaries", PlatformDir);
+#else
 	FString LibDir = FPaths::Combine(rclcppDir, "Libraries", PlatformDir);
+#endif
 	FPaths::CollapseRelativeDirectories(LibDir);
 	checkf(FPaths::DirectoryExists(*LibDir), TEXT("rclcpp library directory %s did not exist"), *LibDir);
-	FPlatformMisc::SetEnvironmentVar(TEXT("AMENT_PREFIX_PATH"), *LibDir);
+#if PLATFORM_WINDOWS
+	_putenv_s(TCHAR_TO_UTF8(TEXT("AMENT_PREFIX_PATH")),TCHAR_TO_UTF8(*LibDir));
+#else
+	FPlatformMisc::SetEnvironmentVar(TCHAR_TO_UTF8(TEXT("AMENT_PREFIX_PATH")), TCHAR_TO_UTF8(*LibDir));
+#endif
 }
 
 void FTempoROSModule::StartupModule()
 {
 	SetAmentPrefixPath();
-	
+
 	InitROS();
 	
 #if WITH_EDITOR

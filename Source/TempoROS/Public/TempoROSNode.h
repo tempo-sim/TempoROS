@@ -36,7 +36,7 @@ public:
 							     bool bAutoTick=true,
 							     const rclcpp::NodeOptions& NodeOptions=rclcpp::NodeOptions(GetUnrealAllocator()));
 
-	const TMap<FString, std::unique_ptr<FTempoROSPublisher>>& GetPublishers() const { return Publishers; }
+	const TMap<FString, TUniquePtr<FTempoROSPublisher>>& GetPublishers() const { return Publishers; }
 
 	UFUNCTION(BlueprintCallable)
 	TSet<FString> GetPublishedTopics() const;
@@ -54,7 +54,7 @@ public:
 			UE_LOG(LogTempoROS, Error, TEXT("Node already has publisher for topic %s"), *Topic);
 			return;
 		}
-		Publishers.Emplace(Topic, std::make_unique<TTempoROSPublisher<MessageType>>(this, Topic, QOSProfile, bPrependNodeName));
+		Publishers.Emplace(Topic, MakeUnique<TTempoROSPublisher<MessageType>>(this, Topic, QOSProfile, bPrependNodeName));
 	}
 
 	UFUNCTION(BlueprintCallable)
@@ -63,12 +63,12 @@ public:
 	template <typename MessageType>
 	void Publish(const FString& Topic, const MessageType& Message)
 	{
-		std::unique_ptr<FTempoROSPublisher>* PublisherPtr = Publishers.Find(Topic);
+		TUniquePtr<FTempoROSPublisher>* PublisherPtr = Publishers.Find(Topic);
 		if (!PublisherPtr)
 		{
-			PublisherPtr = &Publishers.Emplace(Topic, std::make_unique<TTempoROSPublisher<MessageType>>(this, Topic, FROSQOSProfile(), true));
+			PublisherPtr = &Publishers.Emplace(Topic, MakeUnique<TTempoROSPublisher<MessageType>>(this, Topic, FROSQOSProfile(), true));
 		}
-		if (const TTempoROSPublisher<MessageType>* TypedPublisher = Cast<MessageType>(PublisherPtr->get()))
+		if (const TTempoROSPublisher<MessageType>* TypedPublisher = Cast<MessageType>(PublisherPtr->Get()))
 		{
 			TypedPublisher->Publish(Message);
 			return;
@@ -79,7 +79,7 @@ public:
 	template <typename MessageType>
 	void AddSubscription(const FString& Topic, const TROSSubscriptionDelegate<MessageType>& Callback)
 	{
-		Subscriptions.FindOrAdd(Topic).Emplace(std::make_unique<TTempoROSSubscription<MessageType>>(Node, Topic, Callback));
+		Subscriptions.FindOrAdd(Topic).Emplace(MakeUnique<TTempoROSSubscription<MessageType>>(Node, Topic, Callback));
 	}
 
 	// Remove all subscriptions for a topic. TODO: Support removing individual subscriptions. 
@@ -96,7 +96,7 @@ public:
 		}
 		try
 		{
-			 Services.Emplace(Name, std::make_unique<TTempoROSService<ServiceType>>(Node, Name, Callback));
+			 Services.Emplace(Name, MakeUnique<TTempoROSService<ServiceType>>(Node, Name, Callback));
 		}
 		catch (const std::exception& e)
 		{
@@ -162,9 +162,9 @@ public:
 private:
 	void Init(const FString& NodeName, const rclcpp::NodeOptions& NodeOptions, UWorld* TickWithWorld);
 
-	TMap<FString, std::unique_ptr<FTempoROSPublisher>> Publishers;
-	TMap<FString, TArray<std::unique_ptr<FTempoROSSubscription>>> Subscriptions;
-	TMap<FString, std::unique_ptr<FTempoROSService>> Services;
+	TMap<FString, TUniquePtr<FTempoROSPublisher>> Publishers;
+	TMap<FString, TArray<TUniquePtr<FTempoROSSubscription>>> Subscriptions;
+	TMap<FString, TUniquePtr<FTempoROSService>> Services;
 
 	std::shared_ptr<rclcpp::Node> Node = nullptr;
 	std::unique_ptr<image_transport::ImageTransport> ImageTransport;

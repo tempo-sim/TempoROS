@@ -31,8 +31,8 @@ struct TImplicitToROSConverter<FStampedTransform> : TToROSConverter<geometry_msg
 		geometry_msgs::msg::TransformStamped ROSTransform;
 		ROSTransform.transform = TImplicitToROSConverter<FTransform>::Convert(TempoTransform.Transform);
 		ROSTransform.header.stamp = TToROSConverter<builtin_interfaces::msg::Time, double>::Convert(TempoTransform.Timestamp);
-		ROSTransform.header.frame_id = TToROSConverter<std::pmr::string, FString>::Convert(TempoTransform.FromFrame);
-		ROSTransform.child_frame_id = TToROSConverter<std::pmr::string, FString>::Convert(TempoTransform.ToFrame);
+		ROSTransform.header.frame_id = TToROSConverter<std::string, FString>::Convert(TempoTransform.FromFrame).c_str();
+		ROSTransform.child_frame_id = TToROSConverter<std::string, FString>::Convert(TempoTransform.ToFrame).c_str();
 		return ROSTransform;
 	}
 };
@@ -43,8 +43,8 @@ struct TImplicitFromROSConverter<FStampedTransform> : TFromROSConverter<geometry
 	static ToType Convert(const FromType& ROSTransform)
 	{
 		return FStampedTransform(TFromROSConverter<builtin_interfaces::msg::Time, double>::Convert(ROSTransform.header.stamp),
-			TFromROSConverter<std::pmr::string, FString>::Convert(ROSTransform.header.frame_id),
-			TFromROSConverter<std::pmr::string, FString>::Convert(ROSTransform.child_frame_id),
+			TFromROSConverter<std::string, FString>::Convert(ROSTransform.header.frame_id.c_str()),
+			TFromROSConverter<std::string, FString>::Convert(ROSTransform.child_frame_id.c_str()),
 			TImplicitFromROSConverter<FTransform>::Convert(ROSTransform.transform));
 	}
 };
@@ -56,7 +56,7 @@ struct FTempoStaticTFPublisher
 		Broadcaster = std::make_unique<tf2_ros::StaticTransformBroadcaster>(Node, tf2_ros::StaticBroadcasterQoS(), TempoROSPublisherOptions());
 	}
 
-	void PublishTransform(const FStampedTransform& StampedTransform)
+	void PublishTransform(const FStampedTransform& StampedTransform) const
 	{
 		Broadcaster->sendTransform(TImplicitToROSConverter<FStampedTransform>::Convert(StampedTransform));
 	}
@@ -72,7 +72,7 @@ struct FTempoDynamicTFPublisher
 		Broadcaster = std::make_unique<tf2_ros::TransformBroadcaster>(Node, tf2_ros::DynamicBroadcasterQoS(), TempoROSPublisherOptions());
 	}
 
-	void PublishTransform(const FStampedTransform& StampedTransform)
+	void PublishTransform(const FStampedTransform& StampedTransform) const
 	{
 		Broadcaster->sendTransform(TImplicitToROSConverter<FStampedTransform>::Convert(StampedTransform));
 	}
@@ -92,14 +92,14 @@ struct FTempoTFListener
 	FTransform GetTransform(const FString& FromFrame, const FString& ToFrame, const double Timestamp) const
 	{
 		std::string ErrorMsg;
-		if (!Buffer.canTransform(TToROSConverter<std::pmr::string, FString>::Convert(FromFrame).c_str(),
-			TToROSConverter<std::pmr::string, FString>::Convert(ToFrame).c_str(), tf2::timeFromSec(Timestamp), &ErrorMsg))
+		if (!Buffer.canTransform(TToROSConverter<std::string, FString>::Convert(FromFrame),
+			TToROSConverter<std::string, FString>::Convert(ToFrame), tf2::timeFromSec(Timestamp), &ErrorMsg))
 		{
-			UE_LOG(LogTempoROS, Warning, TEXT("Unable to lookup transform from %s to %s at %f: %s"), *FromFrame, *ToFrame, Timestamp, UTF8_TO_TCHAR(ErrorMsg.c_str()));
+			UE_LOG(LogTempoROS, Warning, TEXT("Unable to lookup transform from %s to %s at %f: %hs"), *FromFrame, *ToFrame, Timestamp, ErrorMsg.c_str());
 			return FTransform::Identity;
 		}
-		return TImplicitFromROSConverter<FTransform>::Convert(Buffer.lookupTransform(TToROSConverter<std::pmr::string, FString>::Convert(FromFrame).c_str(),
-			TToROSConverter<std::pmr::string, FString>::Convert(ToFrame).c_str(),
+		return TImplicitFromROSConverter<FTransform>::Convert(Buffer.lookupTransform(TToROSConverter<std::string, FString>::Convert(FromFrame),
+			TToROSConverter<std::string, FString>::Convert(ToFrame),
 			tf2::timeFromSec(Timestamp)).transform);
 	}
 

@@ -10,25 +10,25 @@
 #include "geometry_msgs/msg/twist.hpp"
 #include "rclcpp/time.hpp"
 
-// DEFINE_TEMPOROS_MESSAGE_TYPE_TRAITS(FString)
-// DEFINE_TEMPOROS_MESSAGE_TYPE_TRAITS(FVector)
-// DEFINE_TEMPOROS_MESSAGE_TYPE_TRAITS(FRotator)
-// DEFINE_TEMPOROS_MESSAGE_TYPE_TRAITS(FTransform)
-// DEFINE_TEMPOROS_MESSAGE_TYPE_TRAITS(FTwist)
+DEFINE_TEMPOROS_MESSAGE_TYPE_TRAITS(FString)
+DEFINE_TEMPOROS_MESSAGE_TYPE_TRAITS(FVector)
+DEFINE_TEMPOROS_MESSAGE_TYPE_TRAITS(FRotator)
+DEFINE_TEMPOROS_MESSAGE_TYPE_TRAITS(FTransform)
+DEFINE_TEMPOROS_MESSAGE_TYPE_TRAITS(FTwist)
 
 template <>
-struct TToROSConverter<std::pmr::string, FString> : TConverter<TToROSConverter<std::pmr::string, FString>>
+struct TToROSConverter<std::string, FString> : TConverter<TToROSConverter<std::string, FString>>
 {
-	static std::pmr::string Convert(const FString& FromValue)
+	static std::string Convert(const FString& FromValue)
 	{
 		return TCHAR_TO_UTF8(*FromValue);
 	}
 };
 
 template <>
-struct TFromROSConverter<std::pmr::string, FString> : TConverter<TFromROSConverter<std::pmr::string, FString>>
+struct TFromROSConverter<std::string, FString> : TConverter<TFromROSConverter<std::string, FString>>
 {
-	static FString Convert(const std::pmr::string& FromValue)
+	static FString Convert(const std::string& FromValue)
 	{
 		return FString(UTF8_TO_TCHAR(FromValue.c_str()));
 	}
@@ -40,7 +40,7 @@ struct TImplicitToROSConverter<FString> : TToROSConverter<std_msgs::msg::String,
 	static ToType Convert(const FromType& FromValue)
 	{
 		std_msgs::msg::String ROSString;
-		ROSString.data = TToROSConverter<std::pmr::string, FString>::Convert(FromValue);
+		ROSString.data = TToROSConverter<std::string, FString>::Convert(FromValue).c_str();
 		return ROSString;
 	}
 };
@@ -50,7 +50,7 @@ struct TImplicitFromROSConverter<FString> : TFromROSConverter<std_msgs::msg::Str
 {
 	static ToType Convert(const FromType& FromValue)
 	{
-		return TFromROSConverter<std::pmr::string, FString>::Convert(FromValue.data);
+		return TFromROSConverter<std::string, FString>::Convert(FromValue.data.c_str());
 	}
 };
 
