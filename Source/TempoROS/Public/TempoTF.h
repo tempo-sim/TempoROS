@@ -80,7 +80,9 @@ private:
 struct FTempoTFListener
 {
 	FTempoTFListener(const std::shared_ptr<rclcpp::Node>& Node)
-		: Listener(Buffer, Node, false, tf2_ros::DynamicListenerQoS(), tf2_ros::DynamicListenerQoS(), TempoROSSubscriptionOptions(GetPolymorphicUnrealAllocator()), TempoROSSubscriptionOptions(GetPolymorphicUnrealAllocator())) {}
+		: Listener(Buffer, Node, true,
+			tf2_ros::DynamicListenerQoS(), tf2_ros::DynamicListenerQoS(),
+			TempoROSSubscriptionOptions(GetPolymorphicUnrealAllocator()), TempoROSSubscriptionOptions(GetPolymorphicUnrealAllocator())) {}
 
 	FTransform GetTransform(const FString& FromFrame, const FString& ToFrame, const double Timestamp) const
 	{

@@ -89,8 +89,11 @@ public class rclcpp : ModuleRules
 
         if (Target.Platform == UnrealTargetPlatform.Win64)
         {
-            PublicDefinitions.Add("_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS=1");
-            PublicDefinitions.Add("_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING=1");
+            PublicDefinitions.Add("EPROSIMA_ALL_DYN_LINK=1");
+            // Either of these supposedly silence a build warning. But they do not actually work.
+            // https://developercommunity.visualstudio.com/t/unable-to-remove-warning-for-cxx17-deprecated-feat/273815
+            // PublicDefinitions.Add("_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS=1");
+            // PublicDefinitions.Add("_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING=1");
             PrivateDefinitions.Add("ROSIDL_TYPESUPPORT_CPP_BUILDING_DLL=1");
             PrivateDefinitions.Add("ROSIDL_TYPESUPPORT_INTROSPECTION_CPP_BUILDING_DLL=1");
         }
@@ -99,9 +102,7 @@ public class rclcpp : ModuleRules
 
         // rclcpp and all modules that depend on it must enable exceptions.
         bEnableExceptions = true;
-        
-        PublicDefinitions.Add("EPROSIMA_ALL_DYN_LINK=1");
-        
+
         AddEngineThirdPartyPrivateStaticDependencies(Target, "OpenSSL");
         AddEngineThirdPartyPrivateStaticDependencies(Target, "zlib");
         AddEngineThirdPartyPrivateStaticDependencies(Target, "UElibPNG");
