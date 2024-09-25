@@ -14,8 +14,10 @@
 inline rclcpp::PublisherOptions TempoROSPublisherOptions()
 {
 	rclcpp::PublisherOptionsWithAllocator<std::pmr::polymorphic_allocator<void>> PublisherOptions;
+// #if PLATFORM_WINDOWS
 	PublisherOptions.allocator = GetPolymorphicUnrealAllocator();
 	PublisherOptions.use_default_callbacks = false;
+// #endif
 	return PublisherOptions;
 }
 
