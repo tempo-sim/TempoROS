@@ -6,6 +6,11 @@
 
 set -e
 
+if [[ "$OSTYPE" != "linux-gnu"* ]]; then
+  echo "TempoROS only supports Linux right now. Come back soon!"
+  exit 1
+fi
+
 # Check for jq
 if ! which jq &> /dev/null; then
   echo "Couldn't find jq"
