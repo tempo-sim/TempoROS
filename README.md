@@ -19,7 +19,7 @@ From your project's Plugins directory run<br />
 
 ### First-Time Setup
 > [!Warning]
-> Skip this if you are using `TempoROS` as part of the rest pf Tempo
+> Skip this if you are using `TempoROS` as part of the rest of Tempo
 
 Run the `Setup.sh` script (from the `TempoROS` root) once. This script will:
 - Install third party dependencies (`rclcpp`)
@@ -38,7 +38,7 @@ The upshot of this all is: although it is possible, we don't recommend using `rc
 In order to publish and subscribe to ROS topics with native Unreal types (e.g. `FMyType`) in `TempoROS` you must:
 - Define a `TImplicitToROSConverter` (for publishing) and/or a `TImplicitFromROSConverter` (for subscribing), which tell `TempoROS` which ROS type to convert your Unreal type to/from, and how to do so.
 - Define a "type trait" for your Unreal type, with `DEFINE_TEMPOROS_MESSAGE_TYPE_TRAITS(FMyType)`.
-- [Optional] If your Unreal type is a `BlueprintType`, you can add a special comment, `// TempoROS__BPSupport` on the implicit converter definition line, and `TempoROS` will take care of the rest.
+- [Optional] If your Unreal type is a `BlueprintType`, you can add a special comment, `// TempoROS__BPSupport`, on the implicit converter definition line, and `TempoROS` will take care of the rest.
 
 We've added several common types already in `TempoROSCommonConverters.h`. For example, here are the implicit converters for `FVector`:
 ```
