@@ -51,12 +51,6 @@ if [ "$TEMPOROS_ENABLED" != "true" ]; then
   exit 0
 fi
 
-# Must have the proper GitHub PAT in your ~/.netrc
-if [ ! -f "$HOME/.netrc" ]; then
-  echo "~/.netrc file not found. A .netrc file with the GitHub PAT is required"
-  exit 1
-fi
-
 if [[ "$OSTYPE" = "msys" ]]; then
   PLATFORM="Windows"
   # Check if we can cross compile
