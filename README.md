@@ -7,6 +7,8 @@ This plugin was written by Tempo Simulation, LLC, and is free for anyone to use 
 
 If you enable `TempoROS` in a project where you **are** using the other Tempo plugins you should also enable `TempoROSBridge`.
 
+`TempoROS` currently only supports Linux. Windows and Mac support will come very soon.
+
 > [!Note]
 > `TempoROS`, like `TempoScripting`, includes a pre-build code generation step for ROS IDL files in your project. If you're not changing ROS IDL files, and you've built at least once, you can use the `TEMPO_SKIP_PREBUILD` environment variable to skip this step. Note that you may have to restart your IDE after changing this.
 
