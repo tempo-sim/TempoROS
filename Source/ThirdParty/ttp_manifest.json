@@ -1,8 +1,8 @@
 {
   "artifact": "rclcpp",
-  "release": "v0.8",
+  "release": "v0.9-test",
   "md5_hashes": {
-    "Linux": "fda0b68ef4b71b60d09e9bca5ea8c609",
+    "Linux": "48b8ac57ed6fe8c2ede03fbebadb6dfd",
     "Mac": "",
     "Windows": "",
     "Windows+Linux": ""
