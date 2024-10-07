@@ -52,7 +52,7 @@ struct TImplicitFromROSConverter<FStampedTransform> : TFromROSConverter<geometry
 struct FTempoStaticTFPublisher
 {
 	FTempoStaticTFPublisher(const std::shared_ptr<rclcpp::Node>& Node)
-		: Broadcaster(Node, tf2_ros::DynamicBroadcasterQoS(), TempoROSPublisherOptions()) {}
+		: Broadcaster(Node, tf2_ros::StaticBroadcasterQoS(), TempoROSPublisherOptions()) {}
 
 	void PublishTransform(const FStampedTransform& StampedTransform)
 	{
