@@ -34,11 +34,7 @@ public:
 	static UTempoROSNode* Create(const FString& NodeName,
 								 UObject* Outer=GetTransientPackage(),
 							     bool bAutoTick=true,
-#if PLATFORM_WINDOWS
 							     const rclcpp::NodeOptions& NodeOptions=rclcpp::NodeOptions(GetUnrealAllocator()));
-#else
-	const rclcpp::NodeOptions& NodeOptions=rclcpp::NodeOptions());
-#endif
 
 	const TMap<FString, TUniquePtr<FTempoROSPublisher>>& GetPublishers() const { return Publishers; }
 

@@ -46,24 +46,23 @@ inline rcl_allocator_t GetUnrealAllocator()
 class UnrealMemoryResource : public std::pmr::memory_resource
 {
 public:
-	static UnrealMemoryResource Instance;
+	static TEMPOROS_API UnrealMemoryResource Instance;
 
 private:
 	virtual void* do_allocate(std::size_t bytes, std::size_t alignment) override
 	{
 		return FMemory::Malloc(bytes, alignment);
 	}
-	
+
 	virtual void do_deallocate(void* p, std::size_t bytes, std::size_t alignment) override
 	{
 		FMemory::Free(p);
 	}
-	
+
 	virtual bool do_is_equal(const std::pmr::memory_resource& other) const noexcept override { return true; }
 };
 
 inline std::shared_ptr<std::pmr::polymorphic_allocator<void>> GetPolymorphicUnrealAllocator()
 {
-	UnrealMemoryResource MemoryResource;
-	return std::make_shared<std::pmr::polymorphic_allocator<void>>(&MemoryResource);
+	return std::make_shared<std::pmr::polymorphic_allocator<void>>(&UnrealMemoryResource::Instance);
 }

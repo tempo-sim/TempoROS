@@ -10,10 +10,8 @@
 inline rclcpp::SubscriptionOptions TempoROSSubscriptionOptions(const std::shared_ptr<std::pmr::polymorphic_allocator<void>>& Allocator)
 {
 	rclcpp::SubscriptionOptionsWithAllocator<std::pmr::polymorphic_allocator<void>> SubscriptionOptions;
-#if PLATFORM_WINDOWS
 	SubscriptionOptions.allocator = Allocator;
 	SubscriptionOptions.use_default_callbacks = false;
-#endif
 	return SubscriptionOptions;
 }
 

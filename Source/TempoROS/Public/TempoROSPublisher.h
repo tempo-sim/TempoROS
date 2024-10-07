@@ -79,7 +79,11 @@ template <ImageConvertible MessageType>
 struct TTempoROSPublisher<MessageType> : FTempoROSPublisher
 {
 	TTempoROSPublisher(const IPublisherSupportInterface* PublisherSupport, const FString& Topic, const FROSQOSProfile& QOSProfile, bool bPrependNodeName)
-		: Node(PublisherSupport->GetNode()), Publisher(PublisherSupport->GetImageTransport()->advertise(bPrependNodeName ? TCHAR_TO_UTF8(*PrependNodeName(Node, Topic)) : TCHAR_TO_UTF8(*Topic), QOSProfile.QueueSize, QOSProfile.Durability == EROSQOSDurability::TransientLocal)) {}
+		: Node(PublisherSupport->GetNode()), Publisher(PublisherSupport->GetImageTransport()->advertise(
+			bPrependNodeName ? TCHAR_TO_UTF8(*PrependNodeName(Node, Topic)) : TCHAR_TO_UTF8(*Topic),
+			QOSProfile.QueueSize,
+			QOSProfile.Durability == EROSQOSDurability::TransientLocal,
+			TempoROSPublisherOptions())) {}
 	
 	void Publish(const MessageType& Message) const
 	{
