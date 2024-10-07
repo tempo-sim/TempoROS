@@ -7,6 +7,14 @@
 
 #include "rclcpp.h"
 
+#if PLATFORM_LINUX
+namespace std::pmr
+{
+  template <class _ValueT>
+  using polymorphic_allocator = std::experimental::pmr::polymorphic_allocator<_ValueT>;
+}
+#endif
+
 inline rclcpp::SubscriptionOptions TempoROSSubscriptionOptions(const std::shared_ptr<std::pmr::polymorphic_allocator<void>>& Allocator)
 {
 	rclcpp::SubscriptionOptionsWithAllocator<std::pmr::polymorphic_allocator<void>> SubscriptionOptions;
