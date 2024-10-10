@@ -15,7 +15,7 @@ struct FTempoROSService
 };
 
 template <typename ServiceType>
-struct TEMPOROS_API TTempoROSService : FTempoROSService
+struct TTempoROSService : FTempoROSService
 {
 	using RequestType = typename ServiceType::Request;
 	using ResponseType = typename ServiceType::Response;

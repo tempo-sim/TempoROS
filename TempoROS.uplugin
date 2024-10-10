@@ -18,6 +18,11 @@
 			"Name": "TempoROS",
 			"Type": "Runtime",
 			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "TempoROSBootstrap",
+			"Type": "Runtime",
+			"LoadingPhase": "EarliestPossible"
 		}
 	],
 	"PreBuildSteps": {
