@@ -69,7 +69,12 @@ public class rclcpp : ModuleRules
         ModuleDepPaths moduleDepPaths = GatherDeps();
         PublicIncludePaths.AddRange(moduleDepPaths.HeaderPaths);
         PublicAdditionalLibraries.AddRange(moduleDepPaths.LibraryPaths);
-        PublicRuntimeLibraryPaths.Add(Path.Combine(ModuleDirectory, "Binaries", "Windows"));
+
+        if (Target.Platform == UnrealTargetPlatform.Win64)
+        {
+            PublicRuntimeLibraryPaths.Add(Path.Combine(ModuleDirectory, "Binaries", "Windows"));
+        }
+
         foreach (string libraryPath in moduleDepPaths.RuntimeLibraryPaths)
         {
             RuntimeDependencies.Add(libraryPath);
