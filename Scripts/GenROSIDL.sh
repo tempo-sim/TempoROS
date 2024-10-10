@@ -95,7 +95,7 @@ TYPESUPPORT_INCLUDE_TEMPLATE=\
 '
 
 TYPESUPPORT_SYMBOL_TEMPLATE=\
-'(void*)\&rosidl_typesupport___TYPESUPPORT___cpp__get___SERVICE_OR_MESSAGE___type_support_handle____PACKAGE_NAME______SRV_OR_MSG______SERVICE_OR_MESSAGE_NAME__,
+'(void*)&rosidl_typesupport___TYPESUPPORT___cpp__get___SERVICE_OR_MESSAGE___type_support_handle____PACKAGE_NAME______SRV_OR_MSG______SERVICE_OR_MESSAGE_NAME__,
 '
 
 # Function to refresh stale files
@@ -144,7 +144,9 @@ GEN_MODULE_MSG_AND_SRVS() {
   fi
   local HAS_ROSIDL_FILES=0
   cd "$SOURCE_DIR"
-  SOURCE_DIR=$(cygpath -m "$SOURCE_DIR")
+  if [[ "$OSTYPE" = "msys" ]]; then
+    SOURCE_DIR=$(cygpath -m "$SOURCE_DIR")
+  fi
   for FILE in $(find . \( -name "*.msg" -o -name "*.srv" \) -type f); do
     HAS_ROSIDL_FILES=1
     if [[ "$OSTYPE" = "msys" ]]; then
