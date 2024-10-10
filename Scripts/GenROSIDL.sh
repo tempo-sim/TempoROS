@@ -94,9 +94,16 @@ TYPESUPPORT_INCLUDE_TEMPLATE=\
 '#include "__INCLUDEFILE__"
 '
 
+if [[ "$OSTYPE" = "msys" ]]; then
+# On Windows we need to escape the \& to avoid a strange bug with recursive substitution.
+TYPESUPPORT_SYMBOL_TEMPLATE=\
+'(void*)\&rosidl_typesupport___TYPESUPPORT___cpp__get___SERVICE_OR_MESSAGE___type_support_handle____PACKAGE_NAME______SRV_OR_MSG______SERVICE_OR_MESSAGE_NAME__,
+'
+else
 TYPESUPPORT_SYMBOL_TEMPLATE=\
 '(void*)&rosidl_typesupport___TYPESUPPORT___cpp__get___SERVICE_OR_MESSAGE___type_support_handle____PACKAGE_NAME______SRV_OR_MSG______SERVICE_OR_MESSAGE_NAME__,
 '
+fi
 
 # Function to refresh stale files
 REPLACE_IF_STALE () {

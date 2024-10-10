@@ -56,6 +56,40 @@ BP_INCLUDE_TEMPLATE=\
 #include "__INCLUDEFILE__"
 '
 
+BP_DELEGATE_TEMPLATE=\
+'
+DECLARE_DYNAMIC_DELEGATE_OneParam(FTempoROS__SANITIZEDMESSAGETYPE__Received, __MESSAGETYPE__, Value);
+'
+
+if [[ "$OSTYPE" = "msys" ]]; then
+# On Windows we need to escape the \& to avoid a strange bug with recursive substitution.
+BP_PUBLISHER_TEMPLATE=\
+'
+    UFUNCTION(BlueprintCallable, Category = "TempoROS", meta=(AutoCreateRefTerm="QOSProfile"))
+    static void Add__SANITIZEDMESSAGETYPE__Publisher(UTempoROSNode* Node, const FString\& Topic, const FROSQOSProfile\& QOSProfile=FROSQOSProfile(), bool bPrependNodeName=true)
+    {
+        Node->AddPublisher<__MESSAGETYPE__>(Topic, QOSProfile, bPrependNodeName);
+    }
+
+    UFUNCTION(BlueprintCallable, Category = "TempoROS")
+    static void Publish__SANITIZEDMESSAGETYPE__(UTempoROSNode* Node, const FString\& Topic, const __MESSAGETYPE__\& Message)
+    {
+        Node->Publish<__MESSAGETYPE__>(Topic, Message);
+    }
+'
+  
+BP_SUBSCRIPTION_TEMPLATE=\
+'
+    UFUNCTION(BlueprintCallable, Category = "TempoROS")
+    static void Add__SANITIZEDMESSAGETYPE__Subscription(UTempoROSNode* Node, const FString\& Topic, const FTempoROS__SANITIZEDMESSAGETYPE__Received\& TempoROSMessageReceivedEvent)
+    {
+        Node->AddSubscription<__MESSAGETYPE__>(Topic, TROSSubscriptionDelegate<__MESSAGETYPE__>::CreateLambda([TempoROSMessageReceivedEvent](const __MESSAGETYPE__\& Value)
+        {
+            TempoROSMessageReceivedEvent.ExecuteIfBound(Value);
+        }));
+    }
+'
+else
 BP_PUBLISHER_TEMPLATE=\
 '
     UFUNCTION(BlueprintCallable, Category = "TempoROS", meta=(AutoCreateRefTerm="QOSProfile"))
@@ -70,12 +104,7 @@ BP_PUBLISHER_TEMPLATE=\
         Node->Publish<__MESSAGETYPE__>(Topic, Message);
     }
 '
-
-BP_DELEGATE_TEMPLATE=\
-'
-DECLARE_DYNAMIC_DELEGATE_OneParam(FTempoROS__SANITIZEDMESSAGETYPE__Received, __MESSAGETYPE__, Value);
-'
-
+  
 BP_SUBSCRIPTION_TEMPLATE=\
 '
     UFUNCTION(BlueprintCallable, Category = "TempoROS")
@@ -87,6 +116,7 @@ BP_SUBSCRIPTION_TEMPLATE=\
         }));
     }
 '
+fi
 
 # Function to refresh stale files
 REPLACE_IF_STALE () {
