@@ -9,6 +9,7 @@
 #include "TempoTF.h"
 
 #include "rclcpp.h"
+
 #include "TempoROSSettings.h"
 #include "image_transport/image_transport.hpp"
 
@@ -33,7 +34,7 @@ public:
 	static UTempoROSNode* Create(const FString& NodeName,
 								 UObject* Outer=GetTransientPackage(),
 							     bool bAutoTick=true,
-							     const rclcpp::NodeOptions& NodeOptions=rclcpp::NodeOptions());
+							     const rclcpp::NodeOptions& NodeOptions=rclcpp::NodeOptions(GetUnrealAllocator()));
 
 	const TMap<FString, TUniquePtr<FTempoROSPublisher>>& GetPublishers() const { return Publishers; }
 
@@ -93,7 +94,14 @@ public:
 			UE_LOG(LogTempoROS, Error, TEXT("Node already has service with name %s"), *Name);
 			return;
 		}
-		Services.Emplace(Name, MakeUnique<TTempoROSService<ServiceType>>(Node, Name, Callback));
+		try
+		{
+			 Services.Emplace(Name, MakeUnique<TTempoROSService<ServiceType>>(Node, Name, Callback));
+		}
+		catch (const std::exception& e)
+		{
+			UE_LOG(LogTempoROS, Error, TEXT("Failed to create service %s"), UTF8_TO_TCHAR(e.what()));
+		}
 	}
 
 	// Publish the "static" transform, which will be latched and provided to all new listeners, between the To and From

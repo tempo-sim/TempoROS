@@ -40,7 +40,7 @@ struct TImplicitToROSConverter<FString> : TToROSConverter<std_msgs::msg::String,
 	static ToType Convert(const FromType& FromValue)
 	{
 		std_msgs::msg::String ROSString;
-		ROSString.data = TToROSConverter<std::string, FString>::Convert(FromValue);
+		ROSString.data = TToROSConverter<std::string, FString>::Convert(FromValue).c_str();
 		return ROSString;
 	}
 };
@@ -50,7 +50,7 @@ struct TImplicitFromROSConverter<FString> : TFromROSConverter<std_msgs::msg::Str
 {
 	static ToType Convert(const FromType& FromValue)
 	{
-		return TFromROSConverter<std::string, FString>::Convert(FromValue.data);
+		return TFromROSConverter<std::string, FString>::Convert(FromValue.data.c_str());
 	}
 };
 
