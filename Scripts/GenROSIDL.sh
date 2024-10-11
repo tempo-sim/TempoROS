@@ -138,10 +138,9 @@ GEN_MODULE_MSG_AND_SRVS() {
   local PRIVATE_DEST_DIR="$MODULE_PATH/Private"
   local PUBLIC_DEST_DIR="$MODULE_PATH/Public"
   local MODULE_NAME="$3"
+  local PACKAGE_NAME="$4"
   local SOURCE_DIR="$INCLUDE_DIR"/"$MODULE_NAME"
-  local PACKAGE_NAME
-  PACKAGE_NAME=$(PASCAL_TO_SNAKE "$MODULE_NAME")
-  
+
   local MODULE_GEN_TEMP_DIR
   MODULE_GEN_TEMP_DIR="$GEN_TEMP_DIR/$MODULE_NAME"
   mkdir -p "$MODULE_GEN_TEMP_DIR/$PACKAGE_NAME"
@@ -203,6 +202,13 @@ GEN_MODULE_MSG_AND_SRVS() {
     FILENAME_NO_EXT=$(SNAKE_TO_PASCAL "$FILENAME_NO_EXT")
     ORIGINAL_FILENAME="$FILENAME_NO_EXT.$EXTENSION"
     MODULE_SRC_TEMP_DIR="$SRC_TEMP_DIR/$MODULE_NAME"
+    # De-duplicate the cpp file names
+    if [[ "$RELATIVE_PATH" = "$PACKAGE_NAME/introspection_cpp"*"__type_support.cpp" ]]; then
+      RELATIVE_PATH=${RELATIVE_PATH//__type_support.cpp/__introspection_cpp_type_support.cpp}
+    fi
+    if [[ "$RELATIVE_PATH" = "$PACKAGE_NAME/fastrtps_cpp"*"__type_support.cpp" ]]; then
+      RELATIVE_PATH=${RELATIVE_PATH//__type_support.cpp/__fastrtps_cpp_type_support.cpp}
+    fi
     # Remove /cpp from RELATIVE_PATH
     RELATIVE_PATH=${RELATIVE_PATH//\/cpp/}
     RELATIVE_PATH=${RELATIVE_PATH//\/introspection_cpp/}
@@ -454,12 +460,27 @@ GET_MODULE_INCLUDES() {
   done
 }
 
+# If there is a ros_info.json file in this module, use the custom package name found there
+# Otherwise, use the module name
+# In either case, make sure the returned package name is snake_case
+GET_ROS_PACKAGE_NAME() {
+  local MODULE_NAME="$1"
+  local MODULE_PATH="$2"
+  local ROS_INFO_FILE="$MODULE_PATH/ros_info.json"
+  if [ -f "$ROS_INFO_FILE" ]; then
+    PASCAL_TO_SNAKE "$(jq -r '.custom_package_name' < "$ROS_INFO_FILE")"
+  else
+    PASCAL_TO_SNAKE "$MODULE_NAME"
+  fi
+}
+
 echo "$MODULE_INFO" | jq -r -c 'to_entries[] | [.key, (.value.Directory // "")] | @tsv' | while IFS=$'\t' read -r MODULE_NAME MODULE_PATH; do
   # Remove surrounding single quotes and replace any \\ with /
   MODULE_PATH=$(echo "$MODULE_PATH" | sed 's/^"//; s/"$//; s/\\\\/\//g')
+  ROS_PACKAGE_NAME=$(GET_ROS_PACKAGE_NAME "$MODULE_NAME" "$MODULE_PATH")
   MODULE_INCLUDES_TEMP_DIR="$INCLUDES_TEMP_DIR/$MODULE_NAME"
   GET_MODULE_INCLUDES "$MODULE_NAME" "$MODULE_INCLUDES_TEMP_DIR"
-  GEN_MODULE_MSG_AND_SRVS "$MODULE_INCLUDES_TEMP_DIR" "$MODULE_PATH" "$MODULE_NAME"
+  GEN_MODULE_MSG_AND_SRVS "$MODULE_INCLUDES_TEMP_DIR" "$MODULE_PATH" "$MODULE_NAME" "$ROS_PACKAGE_NAME"
 done
 
 rm -rf "$TEMP"

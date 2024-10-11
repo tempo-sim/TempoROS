@@ -61,11 +61,21 @@ struct TTempoROSPublisher : FTempoROSPublisher
 		bPrependNodeName ? TCHAR_TO_UTF8(*PrependNodeName(Node, Topic)) : TCHAR_TO_UTF8(*Topic),
 			QOSProfile.ToROS(),
 			TempoROSPublisherOptions());
+		bUseSharedMemory = QOSProfile.bUseSharedMemory;
 	}
 	
 	void Publish(const MessageType& Message) const
 	{
-		Publisher->publish(TImplicitToROSConverter<MessageType>::Convert(Message));
+		if (bUseSharedMemory)
+		{
+			rclcpp::LoanedMessage<ROSMessageType> LoanedMessage = Publisher->borrow_loaned_message();
+			LoanedMessage.get() = TImplicitToROSConverter<MessageType>::Convert(Message);
+			Publisher->publish(std::move(LoanedMessage));
+		}
+		else
+		{
+			Publisher->publish(TImplicitToROSConverter<MessageType>::Convert(Message));
+		}
 	}
 	
 	virtual FName GetMessageType() const override
@@ -81,6 +91,7 @@ struct TTempoROSPublisher : FTempoROSPublisher
 private:
 	const std::shared_ptr<rclcpp::Node>& Node;
 	std::shared_ptr<rclcpp::Publisher<ROSMessageType>> Publisher;
+	bool bUseSharedMemory = false;
 };
 
 template <ImageConvertible MessageType>
