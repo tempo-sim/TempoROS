@@ -14,6 +14,16 @@
 
 DEFINE_LOG_CATEGORY(LogTempoROS);
 
+void SetEnvironmentVar(const TCHAR* VariableName, const TCHAR* Value)
+{
+#if PLATFORM_WINDOWS
+	// On Windows only, SetEnvironmentVar does not seem to work properly, but this does.
+	_putenv_s(TCHAR_TO_UTF8(*VariableName), TCHAR_TO_UTF8(*Value));
+#else
+	FPlatformMisc::SetEnvironmentVar(VariableName, Value);
+#endif
+}
+
 void SetAmentPrefixPath()
 {
 	// Find the rclcpp module directory. The module is not loaded yet, so we can't use FModuleManager.
@@ -57,12 +67,8 @@ void SetAmentPrefixPath()
 #endif
 	FPaths::CollapseRelativeDirectories(LibDir);
 	checkf(FPaths::DirectoryExists(*LibDir), TEXT("rclcpp library directory %s did not exist"), *LibDir);
-#if PLATFORM_WINDOWS
-	// On Windows only, SetEnvironmentVar does not seem to work properly, but this does.
-	_putenv_s(TCHAR_TO_UTF8(TEXT("AMENT_PREFIX_PATH")), TCHAR_TO_UTF8(*LibDir));
-#else
-	FPlatformMisc::SetEnvironmentVar(TEXT("AMENT_PREFIX_PATH"), *LibDir);
-#endif
+
+	SetEnvironmentVar(TEXT("AMENT_PREFIX_PATH"), *LibDir);
 }
 
 void FTempoROSModule::StartupModule()
@@ -104,18 +110,21 @@ void FTempoROSModule::InitROS()
 	{
 	case ERMWImplementation::CycloneDDS:
 		{
-			FPlatformMisc::SetEnvironmentVar(TEXT("RMW_IMPLEMENTATION"), TEXT("rmw_cyclonedds_cpp"));
+			SetEnvironmentVar(TEXT("RMW_IMPLEMENTATION"), TEXT("rmw_cyclonedds_cpp"));
 			break;
 		}
 	case ERMWImplementation::FastRTPS:
 		{
-			FPlatformMisc::SetEnvironmentVar(TEXT("RMW_IMPLEMENTATION"), TEXT("rmw_fastrtps_cpp"));
+			SetEnvironmentVar(TEXT("RMW_IMPLEMENTATION"), TEXT("rmw_fastrtps_cpp"));
 			break;
 		}
 	}
 
+	// CYCLONEDDS_URI
+	SetEnvironmentVar(TEXT("CYCLONEDDS_URI"), *FString::Printf(TEXT("file://%s"), *TempoROSSettings->GetCycloneDDS_URI()));
+
 	// ROS_DOMAIN_ID
-	FPlatformMisc::SetEnvironmentVar(TEXT("ROS_DOMAIN_ID"), *FString::FromInt(TempoROSSettings->GetROSDomainID()));
+	SetEnvironmentVar(TEXT("ROS_DOMAIN_ID"), *FString::FromInt(TempoROSSettings->GetROSDomainID()));
 
 	try
 	{

@@ -115,8 +115,13 @@ struct FROSQOSProfile
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(EditCondition=bCustomLeaseDuration, EditConditionHides=true))
 	float LeaseDuration = 0.0;
 
+	// Whether to use shared memory transport, when available.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bUseSharedMemory = false;
+
 	FROSQOSProfile& CustomQueueSize(int32 Value)
 	{
+		checkf(!bUseSharedMemory || Value < 16, TEXT("Shared memory restricts other QOS options"));
 		QueueSize = Value;
 		bLimitedQueueSize = true;
 		return *this;
@@ -124,12 +129,14 @@ struct FROSQOSProfile
 
 	FROSQOSProfile& KeepAll()
 	{
+		checkf(!bUseSharedMemory, TEXT("Shared memory restricts other QOS options"));
 		bLimitedQueueSize = false;
 		return *this;
 	}
 	
 	FROSQOSProfile& BestEffort()
 	{
+		checkf(!bUseSharedMemory, TEXT("Shared memory restricts other QOS options"));
 		Reliability = EROSQOSReliability::BestEffort;
 		return *this;
 	}
@@ -160,7 +167,21 @@ struct FROSQOSProfile
 
 	FROSQOSProfile& ManualByTopicLiveliness()
 	{
+		checkf(!bUseSharedMemory, TEXT("Shared memory restricts other QOS options"));
 		Liveliness = EROSQOSLiveliness::ManualByTopic;
+		return *this;
+	}
+
+	FROSQOSProfile& SharedMemory()
+	{
+		bUseSharedMemory = true;
+		// Shared memory restricts other QOS options.
+		// https://github.com/ros2/rmw_cyclonedds/blob/humble/shared_memory_support.md#qos-settings
+		Liveliness = EROSQOSLiveliness::Automatic;
+		Deadline = 0.0;
+		Reliability = EROSQOSReliability::Reliable;
+		bLimitedQueueSize = true;
+		QueueSize = FMath::Min(QueueSize, 16);
 		return *this;
 	}
 

@@ -34,7 +34,12 @@ public class TempoROS : ModuleRules
 		
 		if (Target.bBuildEditor)
 		{
-			PrivateDependencyModuleNames.Add("HotReload");
+			PrivateDependencyModuleNames.AddRange(
+				new string [] 
+			{
+				"HotReload",
+				"SettingsEditor"
+			});
 		}
 
 		// All modules that depend on rclcpp must enable exceptions.
