@@ -120,8 +120,21 @@ void FTempoROSModule::InitROS()
 		}
 	}
 
+#if PLATFORM_LINUX
 	// CYCLONEDDS_URI
-	SetEnvironmentVar(TEXT("CYCLONEDDS_URI"), *FString::Printf(TEXT("file://%s"), *TempoROSSettings->GetCycloneDDS_URI()));
+	const FString CycloneDDS_URI = TempoROSSettings->GetCycloneDDS_URI();
+	if (!CycloneDDS_URI.IsEmpty())
+	{
+		if (FPaths::FileExists(CycloneDDS_URI))
+		{
+			SetEnvironmentVar(TEXT("CYCLONEDDS_URI"), *FString::Printf(TEXT("file://%s"), *TempoROSSettings->GetCycloneDDS_URI()));
+		}
+		else
+		{
+			UE_LOG(LogTempoROS, Error, TEXT("Configured CycloneDDS URI file not found"), *CycloneDDS_URI);
+		}
+	}
+#endif
 
 	// ROS_DOMAIN_ID
 	SetEnvironmentVar(TEXT("ROS_DOMAIN_ID"), *FString::FromInt(TempoROSSettings->GetROSDomainID()));
