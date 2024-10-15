@@ -79,23 +79,44 @@ private:
 
 struct FTempoTFListener
 {
-	FTempoTFListener(const std::shared_ptr<rclcpp::Node>& Node)
-		: Listener(Buffer, Node, true,
-			tf2_ros::DynamicListenerQoS(), tf2_ros::DynamicListenerQoS(),
-			TempoROSSubscriptionOptions(GetPolymorphicUnrealAllocator()), TempoROSSubscriptionOptions(GetPolymorphicUnrealAllocator())) {}
-
-	FTransform GetTransform(const FString& FromFrame, const FString& ToFrame, const double Timestamp) const
+	static rclcpp::SubscriptionOptions SubOptions()
 	{
-		std::string ErrorMsg;
+		rclcpp::SubscriptionOptions Options = TempoROSSubscriptionOptions(GetPolymorphicUnrealAllocator());
+		Options.qos_overriding_options = rclcpp::QosOverridingOptions{
+			rclcpp::QosPolicyKind::Depth,
+			rclcpp::QosPolicyKind::Durability,
+			rclcpp::QosPolicyKind::History,
+			rclcpp::QosPolicyKind::Reliability};
+		return Options;
+	}
+
+	static rclcpp::SubscriptionOptions StaticSubOptions()
+	{
+		rclcpp::SubscriptionOptions Options = TempoROSSubscriptionOptions(GetPolymorphicUnrealAllocator());
+		Options.qos_overriding_options = rclcpp::QosOverridingOptions{
+			rclcpp::QosPolicyKind::Depth,
+			rclcpp::QosPolicyKind::History,
+			rclcpp::QosPolicyKind::Reliability};
+		return Options;
+	}
+	
+	FTempoTFListener(const std::shared_ptr<rclcpp::Node>& Node)
+		: Listener(Buffer, Node, false,
+			tf2_ros::DynamicListenerQoS(), tf2_ros::DynamicListenerQoS(),
+			SubOptions(), StaticSubOptions()) {}
+
+	bool GetTransform(const FString& FromFrame, const FString& ToFrame, const double Timestamp, FTransform& TransformOut) const
+	{
 		if (!Buffer.canTransform(TToROSConverter<std::string, FString>::Convert(FromFrame),
-			TToROSConverter<std::string, FString>::Convert(ToFrame), tf2::timeFromSec(Timestamp), &ErrorMsg))
+			TToROSConverter<std::string, FString>::Convert(ToFrame), tf2::timeFromSec(Timestamp), nullptr))
 		{
-			UE_LOG(LogTempoROS, Warning, TEXT("Unable to lookup transform from %s to %s at %f: %hs"), *FromFrame, *ToFrame, Timestamp, ErrorMsg.c_str());
-			return FTransform::Identity;
+			UE_LOG(LogTempoROS, Warning, TEXT("Unable to lookup transform from %s to %s at %f."), *FromFrame, *ToFrame, Timestamp);
+			return false;
 		}
-		return TImplicitFromROSConverter<FTransform>::Convert(Buffer.lookupTransform(TToROSConverter<std::string, FString>::Convert(FromFrame),
+		TransformOut = TImplicitFromROSConverter<FTransform>::Convert(Buffer.lookupTransform(TToROSConverter<std::string, FString>::Convert(FromFrame),
 			TToROSConverter<std::string, FString>::Convert(ToFrame),
 			tf2::timeFromSec(Timestamp)).transform);
+		return true;
 	}
 
 private:
