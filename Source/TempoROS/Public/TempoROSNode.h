@@ -210,7 +210,7 @@ public:
 		}
 		try
 		{
-			Transform = TFListener->GetTransform(FromFrameResolved, ToFrame, Timestamp);
+			return TFListener->GetTransform(FromFrameResolved, ToFrame, Timestamp, Transform);
 		}
 		catch (const std::exception& E)
 		{
