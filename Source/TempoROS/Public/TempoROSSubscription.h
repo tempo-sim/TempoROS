@@ -43,18 +43,19 @@ struct TEMPOROS_API TTempoROSSubscription : FTempoROSSubscription
 {
 	using ROSMessageType = typename TImplicitFromROSConverter<MessageType>::FromType;
 	
-	TTempoROSSubscription(const std::shared_ptr<rclcpp::Node>& Node, const FString& Topic, const TROSSubscriptionDelegate<MessageType>& Callback)
+	TTempoROSSubscription(const std::shared_ptr<rclcpp::Node>& Node, const FString& Topic, const TROSSubscriptionDelegate<MessageType>& Callback, const FROSQOSProfile& QOSProfile)
 	{
 		std::shared_ptr<std::pmr::polymorphic_allocator<void>> Allocator = GetPolymorphicUnrealAllocator();
 		Subscription = Node->create_subscription<ROSMessageType>(
 			TCHAR_TO_UTF8(*Topic),
-			0,
+			QOSProfile.ToROS(),
 			[Callback](const ROSMessageType& Message)
 			{
 			  Callback.ExecuteIfBound(TImplicitFromROSConverter<MessageType>::Convert(Message));
 			},
 			TempoROSSubscriptionOptions(Allocator),
-			TempoROSSubscriptionMemoryStrategy<ROSMessageType>(Allocator));
+			TempoROSSubscriptionMemoryStrategy<ROSMessageType>(Allocator)
+		);
 	}
 	
 private:
