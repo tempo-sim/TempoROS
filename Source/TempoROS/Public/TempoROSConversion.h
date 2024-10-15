@@ -24,8 +24,17 @@ struct TConverter
 	template <typename X = T>
 	using FromType = typename X::FromType;
 
+	// Base case for when the two types are the same (no conversion). Specific converters should specialize.
 	template <typename X = T>
 	static typename X::ToType Convert(const typename X::FromType& FromValue)
+	{
+		static_assert(std::is_same_v<typename X::ToType, typename X::FromType>, "No specialization found to convert these types");
+		return FromValue;
+	}
+
+	// This will probably not be specialized, but enables a copy-less base (no conversion) case.
+	template <typename X = T>
+	static typename X::ToType Convert(typename X::FromType&& FromValue)
 	{
 		static_assert(std::is_same_v<typename X::ToType, typename X::FromType>, "No specialization found to convert these types");
 		return FromValue;

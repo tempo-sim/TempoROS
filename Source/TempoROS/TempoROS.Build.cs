@@ -25,6 +25,7 @@ public class TempoROS : ModuleRules
 				"CoreUObject",
 				"DeveloperSettings",
 				"Engine",
+				"SettingsEditor",
 				"Slate",
 				"SlateCore",
 				// Tempo

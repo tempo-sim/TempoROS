@@ -46,9 +46,7 @@ struct TEMPOROS_API TTempoROSSubscription : FTempoROSSubscription
 	TTempoROSSubscription(const std::shared_ptr<rclcpp::Node>& Node, const FString& Topic, const TROSSubscriptionDelegate<MessageType>& Callback, const FROSQOSProfile& QOSProfile)
 	{
 		std::shared_ptr<std::pmr::polymorphic_allocator<void>> Allocator = GetPolymorphicUnrealAllocator();
-		try
-		{
-			Subscription = Node->create_subscription<ROSMessageType>(
+		Subscription = Node->create_subscription<ROSMessageType>(
 			TCHAR_TO_UTF8(*Topic),
 			QOSProfile.ToROS(),
 			[Callback](const ROSMessageType& Message)
@@ -56,12 +54,8 @@ struct TEMPOROS_API TTempoROSSubscription : FTempoROSSubscription
 			  Callback.ExecuteIfBound(TImplicitFromROSConverter<MessageType>::Convert(Message));
 			},
 			TempoROSSubscriptionOptions(Allocator),
-			TempoROSSubscriptionMemoryStrategy<ROSMessageType>(Allocator));
-		}
-		catch (const std::exception& e)
-		{
-			UE_LOG(LogTempoROS, Fatal, TEXT("Failed to create subscription with error %s"), UTF8_TO_TCHAR(e.what()));
-		}
+			TempoROSSubscriptionMemoryStrategy<ROSMessageType>(Allocator)
+		);
 	}
 	
 private:

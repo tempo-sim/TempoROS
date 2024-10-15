@@ -2,6 +2,8 @@
 
 #include "TempoROSSettings.h"
 
+#include "ISettingsEditorModule.h"
+
 #include "TempoROS.h"
 
 #if WITH_EDITOR
@@ -16,16 +18,19 @@ void UTempoROSSettings::PostEditChangeProperty(FPropertyChangedEvent& PropertyCh
 		UE_LOG(LogTempoROS, Error, TEXT("CycloneDDS is the only supported RMW implementation on Mac"));
 #else
 		TempoROSSettingsChangedEvent.Broadcast();
+		FModuleManager::GetModuleChecked<ISettingsEditorModule>("SettingsEditor").OnApplicationRestartRequired();
 #endif
 	}
 	else if (PropertyChangedEvent.MemberProperty->GetName() == GET_MEMBER_NAME_CHECKED(UTempoROSSettings, CycloneDDS_URI) &&
 		RMWImplementation == ERMWImplementation::CycloneDDS)
 	{
 		TempoROSSettingsChangedEvent.Broadcast();
+		FModuleManager::GetModuleChecked<ISettingsEditorModule>("SettingsEditor").OnApplicationRestartRequired();
 	}
 	else if (PropertyChangedEvent.MemberProperty->GetName() == GET_MEMBER_NAME_CHECKED(UTempoROSSettings, ROSDomainID))
 	{
 		TempoROSSettingsChangedEvent.Broadcast();
+		FModuleManager::GetModuleChecked<ISettingsEditorModule>("SettingsEditor").OnApplicationRestartRequired();
 	}
 }
 #endif

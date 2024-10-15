@@ -22,7 +22,6 @@ UTempoROSNode* UTempoROSNode::Create(const FString& NodeName, UObject* Outer, bo
 			UE_LOG(LogTempoROS, Error, TEXT("Unable to find world to auto tick TempoROS node %s"), *NodeName);
 		}
 	}
-	// TODO: Wrap all rclcpp calls in try/catch
 	try
 	{
 		NewNode->Init(NodeName, NodeOptions, TickWithWorld);
@@ -52,10 +51,7 @@ void UTempoROSNode::Init(const FString& NodeName, const rclcpp::NodeOptions& Nod
 
 void UTempoROSNode::Tick(float DeltaTime) const
 {
-	for (int I = 0; I < 128; ++I)
-	{
-		rclcpp::spin_some(Node);
-	}
+	rclcpp::spin_some(Node);
 }
 
 TSet<FString> UTempoROSNode::GetPublishedTopics() const

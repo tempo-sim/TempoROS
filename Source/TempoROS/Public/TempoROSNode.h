@@ -42,44 +42,82 @@ public:
 	TSet<FString> GetPublishedTopics() const;
 	
 	template <typename MessageType>
-	void AddPublisher(const FString& Topic, const FROSQOSProfile& QOSProfile=FROSQOSProfile(), bool bPrependNodeName=true)
+	bool AddPublisher(const FString& Topic, const FROSQOSProfile& QOSProfile=FROSQOSProfile(), bool bPrependNodeName=true)
 	{
 		if (TMessageTypeTraits<MessageType>::MessageTypeDescriptor == NAME_None)
 		{
 			UE_LOG(LogTempoROS, Error, TEXT("Attempted to create a publisher for a type with missing type traits. Use DEFINE_TEMPOROS_MESSAGE_TYPE_TRAITS to define."));
-			return;
+			return false;
 		}
 		if (Publishers.Contains(Topic))
 		{
 			UE_LOG(LogTempoROS, Error, TEXT("Node already has publisher for topic %s"), *Topic);
-			return;
+			return false;
 		}
-		Publishers.Emplace(Topic, MakeUnique<TTempoROSPublisher<MessageType>>(this, Topic, QOSProfile, bPrependNodeName));
+		try
+		{
+			Publishers.Emplace(Topic, MakeUnique<TTempoROSPublisher<MessageType>>(this, Topic, QOSProfile, bPrependNodeName));
+		}
+		catch (const std::exception& E)
+		{
+			UE_LOG(LogTempoROS, Error, TEXT("Failed to create publisher for topic %s with error: %s"), *Topic, UTF8_TO_TCHAR(E.what()));
+			return false;
+		}
+		return true;
 	}
 
 	UFUNCTION(BlueprintCallable)
 	void RemovePublisher(const FString& Topic);
 
 	template <typename MessageType>
-	void Publish(const FString& Topic, const MessageType& Message)
+	bool Publish(const FString& Topic, const MessageType& Message)
 	{
 		TUniquePtr<FTempoROSPublisher>* PublisherPtr = Publishers.Find(Topic);
 		if (!PublisherPtr)
 		{
-			PublisherPtr = &Publishers.Emplace(Topic, MakeUnique<TTempoROSPublisher<MessageType>>(this, Topic, FROSQOSProfile(), true));
+			try
+			{
+				PublisherPtr = &Publishers.Emplace(Topic, MakeUnique<TTempoROSPublisher<MessageType>>(this, Topic, FROSQOSProfile(), true));
+			}
+			catch (const std::exception& E)
+			{
+				UE_LOG(LogTempoROS, Error, TEXT("Failed to create publisher for topic %s with error: %s"), *Topic, UTF8_TO_TCHAR(E.what()));
+				return false;
+			}
 		}
-		if (const TTempoROSPublisher<MessageType>* TypedPublisher = Cast<MessageType>(PublisherPtr->Get()))
+		const TTempoROSPublisher<MessageType>* TypedPublisher = Cast<MessageType>(PublisherPtr->Get());
+		if (!TypedPublisher)
 		{
-			TypedPublisher->Publish(Message);
-			return;
+			UE_LOG(LogTempoROS, Error, TEXT("Publisher for topic %s did not have correct type"), *Topic);
+			return false;
 		}
-		UE_LOG(LogTempoROS, Error, TEXT("Publisher for topic %s did not have correct type"), *Topic);
+		{
+			try
+			{
+				TypedPublisher->Publish(Message);
+			}
+			catch (const std::exception& E)
+			{
+				UE_LOG(LogTempoROS, Error, TEXT("Failed to publish on topic %s with error: %s"), *Topic, UTF8_TO_TCHAR(E.what()));
+				return false;
+			}
+		}
+		return true;
 	}
 	
 	template <typename MessageType>
-	void AddSubscription(const FString& Topic, const TROSSubscriptionDelegate<MessageType>& Callback, const FROSQOSProfile& QOSProfile=FROSQOSProfile())
+	bool AddSubscription(const FString& Topic, const TROSSubscriptionDelegate<MessageType>& Callback, const FROSQOSProfile& QOSProfile=FROSQOSProfile())
 	{
-		Subscriptions.FindOrAdd(Topic).Emplace(MakeUnique<TTempoROSSubscription<MessageType>>(Node, Topic, Callback, QOSProfile));
+		try
+		{
+			Subscriptions.FindOrAdd(Topic).Emplace(MakeUnique<TTempoROSSubscription<MessageType>>(Node, Topic, Callback, QOSProfile));
+		}
+		catch (const std::exception& E)
+		{
+			UE_LOG(LogTempoROS, Error, TEXT("Failed to create subscription for topic %s with error: %s"), *Topic, UTF8_TO_TCHAR(E.what()));
+			return false;
+		}
+		return true;
 	}
 
 	// Remove all subscriptions for a topic. TODO: Support removing individual subscriptions.
@@ -87,27 +125,29 @@ public:
 	void RemoveSubscriptions(const FString& Topic);
 
 	template <typename ServiceType>
-	void AddService(const FString& Name, const TROSServiceDelegate<ServiceType>& Callback)
+	bool AddService(const FString& Name, const TROSServiceDelegate<ServiceType>& Callback)
 	{
 		if (Services.Contains(Name))
 		{
 			UE_LOG(LogTempoROS, Error, TEXT("Node already has service with name %s"), *Name);
-			return;
+			return false;
 		}
 		try
 		{
 			 Services.Emplace(Name, MakeUnique<TTempoROSService<ServiceType>>(Node, Name, Callback));
 		}
-		catch (const std::exception& e)
+		catch (const std::exception& E)
 		{
-			UE_LOG(LogTempoROS, Error, TEXT("Failed to create service %s"), UTF8_TO_TCHAR(e.what()));
+			UE_LOG(LogTempoROS, Error, TEXT("Failed to create service with error: %s"), UTF8_TO_TCHAR(E.what()));
+			return false;
 		}
+		return true;
 	}
 
 	// Publish the "static" transform, which will be latched and provided to all new listeners, between the To and From
 	// frames at the specified time. Timestamp=0.0 (the default) means "now".
 	UFUNCTION(BlueprintCallable, BlueprintPure=false, meta=(AutoCreateRefTerm="FromFrame,Timestamp", HidePin="Timestamp"))
-	void PublishStaticTransform(const FTransform& Transform, const FString& ToFrame, const FString& FromFrame="", double Timestamp=0.0) const
+	bool PublishStaticTransform(const FTransform& Transform, const FString& ToFrame, const FString& FromFrame="", double Timestamp=0.0) const
 	{
 		FString FromFrameResolved = FromFrame;
 		if (FromFrameResolved.IsEmpty())
@@ -119,13 +159,22 @@ public:
 		{
 			TimestampResolved = GetWorld()->GetTimeSeconds();
 		}
-		StaticTFPublisher->PublishTransform(FStampedTransform(TimestampResolved, FromFrameResolved, ToFrame, Transform));
+		try
+		{
+			StaticTFPublisher->PublishTransform(FStampedTransform(TimestampResolved, FromFrameResolved, ToFrame, Transform));
+		}
+		catch (const std::exception& E)
+		{
+			UE_LOG(LogTempoROS, Error, TEXT("Failed to publish static transform with error: %s"), UTF8_TO_TCHAR(E.what()));
+			return false;
+		}
+		return true;
 	}
 
 	// Publish the "dynamic" transform, which will not be latched, between the To and From
 	// frames at the specified time. Timestamp=0.0 (the default) means "now".
 	UFUNCTION(BlueprintCallable, BlueprintPure=false, meta=(AutoCreateRefTerm="FromFrame,Timestamp", HidePin="Timestamp"))
-	void PublishDynamicTransform(const FTransform& Transform, const FString& ToFrame, const FString& FromFrame="", double Timestamp=0.0) const
+	bool PublishDynamicTransform(const FTransform& Transform, const FString& ToFrame, const FString& FromFrame="", double Timestamp=0.0) const
 	{
 		FString FromFrameResolved = FromFrame;
 		if (FromFrameResolved.IsEmpty())
@@ -137,29 +186,50 @@ public:
 		{
 			TimestampResolved = GetWorld()->GetTimeSeconds();
 		}
-		DynamicTFPublisher->PublishTransform(FStampedTransform(TimestampResolved, FromFrameResolved, ToFrame, Transform));
+		try
+		{
+			DynamicTFPublisher->PublishTransform(FStampedTransform(TimestampResolved, FromFrameResolved, ToFrame, Transform));
+		}
+		catch (const std::exception& E)
+		{
+			UE_LOG(LogTempoROS, Error, TEXT("Failed to publish dynamic transform with error: %s"), UTF8_TO_TCHAR(E.what()));
+			return false;
+		}
+		return true;
 	}
 
 	// Get the transform between the To and From frames at the specified time.
 	// Timestamp=0.0 (the default) gets the latest transform.
 	UFUNCTION(BlueprintCallable, meta=(AutoCreateRefTerm="FromFrame,Timestamp", HidePin="Timestamp"))
-	FTransform GetTransform(const FString& ToFrame, const FString& FromFrame="", double Timestamp=0.0) const
+	bool GetTransform(FTransform& Transform, const FString& ToFrame, const FString& FromFrame="", double Timestamp=0.0) const
 	{
 		FString FromFrameResolved = FromFrame;
 		if (FromFrameResolved.IsEmpty())
 		{
 			FromFrameResolved = GetDefault<UTempoROSSettings>()->GetFixedFrameName();
 		}
-		return TFListener->GetTransform(FromFrameResolved, ToFrame, Timestamp);
+		try
+		{
+			Transform = TFListener->GetTransform(FromFrameResolved, ToFrame, Timestamp);
+		}
+		catch (const std::exception& E)
+		{
+			UE_LOG(LogTempoROS, Error, TEXT("Failed to publish dynamic transform with error: %s"), UTF8_TO_TCHAR(E.what()));
+			return false;
+		}
+		return true;
 	}
 
 	UFUNCTION(BlueprintCallable)
 	void Tick(float DeltaTime) const;
 
+protected:
+	/* IPublisherSupportInterface */
+	template <typename T>
+	friend struct TTempoROSPublisher;
 	virtual const std::shared_ptr<rclcpp::Node>& GetNode() const override { return Node; }
 	virtual const std::unique_ptr<image_transport::ImageTransport>& GetImageTransport() const override { return ImageTransport; }
 
-private:
 	void Init(const FString& NodeName, const rclcpp::NodeOptions& NodeOptions, UWorld* TickWithWorld);
 
 	TMap<FString, TUniquePtr<FTempoROSPublisher>> Publishers;
