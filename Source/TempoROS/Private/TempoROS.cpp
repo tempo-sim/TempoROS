@@ -117,8 +117,15 @@ void FTempoROSModule::InitROS()
 	// ROS_DOMAIN_ID
 	FPlatformMisc::SetEnvironmentVar(TEXT("ROS_DOMAIN_ID"), *FString::FromInt(TempoROSSettings->GetROSDomainID()));
 
-	rclcpp::init(0, nullptr);
-	
+	try
+	{
+		rclcpp::init(0, nullptr);
+	}
+	catch (const std::exception& E)
+	{
+		UE_LOG(LogTempoROS, Error, TEXT("Failed to initialize rclcpp with error: %s"), UTF8_TO_TCHAR(E.what()));
+	}
+
 	bROSInitialized = true;
 }
 
@@ -126,8 +133,15 @@ void FTempoROSModule::ShutdownROS()
 {
 	if (bROSInitialized)
 	{
-		rclcpp::shutdown();
-	
+		try
+		{
+			rclcpp::shutdown();
+		}
+		catch (const std::exception& E)
+		{
+			UE_LOG(LogTempoROS, Error, TEXT("Failed to shut down rclcpp with error: %s"), UTF8_TO_TCHAR(E.what()));
+		}
+
 		bROSInitialized = false;
 	}
 	else
