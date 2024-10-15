@@ -57,10 +57,18 @@ struct TTempoROSPublisher : FTempoROSPublisher
 	TTempoROSPublisher(const IPublisherSupportInterface* PublisherSupport, const FString& Topic, const FROSQOSProfile& QOSProfile, bool bPrependNodeName)
 		: Node(PublisherSupport->GetNode())
 	{
-		Publisher = Node->create_publisher<ROSMessageType>(
-		bPrependNodeName ? TCHAR_TO_UTF8(*PrependNodeName(Node, Topic)) : TCHAR_TO_UTF8(*Topic),
-			QOSProfile.ToROS(),
-			TempoROSPublisherOptions());
+		try
+		{
+			Publisher = Node->create_publisher<ROSMessageType>(
+				bPrependNodeName ? TCHAR_TO_UTF8(*PrependNodeName(Node, Topic)) : TCHAR_TO_UTF8(*Topic),
+					QOSProfile.ToROS(),
+					TempoROSPublisherOptions());
+		}
+		catch (const std::exception& e)
+		{
+			UE_LOG(LogTempoROS, Fatal, TEXT("Failed to create publisher with error %s"), UTF8_TO_TCHAR(e.what()));
+		}
+
 		bUseSharedMemory = QOSProfile.bUseSharedMemory;
 	}
 	

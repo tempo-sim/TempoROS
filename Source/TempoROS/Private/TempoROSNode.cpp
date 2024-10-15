@@ -52,7 +52,10 @@ void UTempoROSNode::Init(const FString& NodeName, const rclcpp::NodeOptions& Nod
 
 void UTempoROSNode::Tick(float DeltaTime) const
 {
-	rclcpp::spin_some(Node);
+	for (int I = 0; I < 128; ++I)
+	{
+		rclcpp::spin_some(Node);
+	}
 }
 
 TSet<FString> UTempoROSNode::GetPublishedTopics() const

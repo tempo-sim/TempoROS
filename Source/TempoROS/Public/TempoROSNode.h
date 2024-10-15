@@ -77,12 +77,12 @@ public:
 	}
 	
 	template <typename MessageType>
-	void AddSubscription(const FString& Topic, const TROSSubscriptionDelegate<MessageType>& Callback)
+	void AddSubscription(const FString& Topic, const TROSSubscriptionDelegate<MessageType>& Callback, const FROSQOSProfile& QOSProfile=FROSQOSProfile())
 	{
-		Subscriptions.FindOrAdd(Topic).Emplace(MakeUnique<TTempoROSSubscription<MessageType>>(Node, Topic, Callback));
+		Subscriptions.FindOrAdd(Topic).Emplace(MakeUnique<TTempoROSSubscription<MessageType>>(Node, Topic, Callback, QOSProfile));
 	}
 
-	// Remove all subscriptions for a topic. TODO: Support removing individual subscriptions. 
+	// Remove all subscriptions for a topic. TODO: Support removing individual subscriptions.
 	UFUNCTION(BlueprintCallable)
 	void RemoveSubscriptions(const FString& Topic);
 

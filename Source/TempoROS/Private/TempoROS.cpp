@@ -121,7 +121,7 @@ void FTempoROSModule::InitROS()
 	}
 
 	// CYCLONEDDS_URI
-	SetEnvironmentVar(TEXT("CYCLONEDDS_URI"), *TempoROSSettings->GetCycloneDDS_URI());
+	SetEnvironmentVar(TEXT("CYCLONEDDS_URI"), *FString::Printf(TEXT("file://%s"), *TempoROSSettings->GetCycloneDDS_URI()));
 
 	// ROS_DOMAIN_ID
 	SetEnvironmentVar(TEXT("ROS_DOMAIN_ID"), *FString::FromInt(TempoROSSettings->GetROSDomainID()));
@@ -136,8 +136,6 @@ void FTempoROSModule::ShutdownROS()
 	if (bROSInitialized)
 	{
 		rclcpp::shutdown();
-	
-		bROSInitialized = false;
 	}
 	else
 	{

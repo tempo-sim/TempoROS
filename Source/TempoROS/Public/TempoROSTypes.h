@@ -115,6 +115,7 @@ struct FROSQOSProfile
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(EditCondition=bCustomLeaseDuration, EditConditionHides=true))
 	float LeaseDuration = 0.0;
 
+	// Whether to use shared memory transport, when available.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool bUseSharedMemory = false;
 

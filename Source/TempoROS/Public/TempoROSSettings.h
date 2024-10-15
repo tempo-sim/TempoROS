@@ -10,7 +10,7 @@
 
 DECLARE_MULTICAST_DELEGATE(FTempoROSSettingsChanged);
 
-UCLASS(Config=Game)
+UCLASS(Config=Game, DisplayName="Tempo ROS")
 class TEMPOROS_API UTempoROSSettings : public UDeveloperSettings
 {
 	GENERATED_BODY()

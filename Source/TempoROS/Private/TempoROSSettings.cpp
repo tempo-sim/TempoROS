@@ -8,8 +8,8 @@
 void UTempoROSSettings::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
-	
-	if (PropertyChangedEvent.Property->GetName() == GET_MEMBER_NAME_CHECKED(UTempoROSSettings, RMWImplementation))
+
+	if (PropertyChangedEvent.MemberProperty->GetName() == GET_MEMBER_NAME_CHECKED(UTempoROSSettings, RMWImplementation))
 	{
 #if PLATFORM_MAC
 		RMWImplementation = ERMWImplementation::CycloneDDS;
@@ -18,7 +18,12 @@ void UTempoROSSettings::PostEditChangeProperty(FPropertyChangedEvent& PropertyCh
 		TempoROSSettingsChangedEvent.Broadcast();
 #endif
 	}
-	else if (PropertyChangedEvent.Property->GetName() == GET_MEMBER_NAME_CHECKED(UTempoROSSettings, ROSDomainID))
+	else if (PropertyChangedEvent.MemberProperty->GetName() == GET_MEMBER_NAME_CHECKED(UTempoROSSettings, CycloneDDS_URI) &&
+		RMWImplementation == ERMWImplementation::CycloneDDS)
+	{
+		TempoROSSettingsChangedEvent.Broadcast();
+	}
+	else if (PropertyChangedEvent.MemberProperty->GetName() == GET_MEMBER_NAME_CHECKED(UTempoROSSettings, ROSDomainID))
 	{
 		TempoROSSettingsChangedEvent.Broadcast();
 	}
