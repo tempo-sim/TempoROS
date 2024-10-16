@@ -40,7 +40,7 @@ ROSNode->AddSubscription<FString>("my_topic", TROSSubscriptionDelegate<FString>:
 }));
 
 // Publish a message.
-ROSNode->Publish("my_topic", TEXT("Hello World!));
+ROSNode->Publish("my_topic", TEXT("Hello World!"));
 ```
 ### Using TempoROS in Blueprint
 Using `TempoROS` from Blueprint is also straightforward. This Blueprint is equivalent to the above C++:
@@ -207,5 +207,5 @@ You can use `TempoROS` as part of a packaged game. You can find a convenient scr
 To package an Unreal project with `TempoROS`, you must specify its custom stage copy handler by adding `CustomStageCopyHandler=TempoROSCopyHandler` to your `Config/DefaultGame.ini`. This allows the package process to correctly copy symbolic links in the `rclcpp` libraries on all platforms.
 
 ## Known Issues
-- To run an Unreal packaged game with TempoROS on Windows, you must add the directory `<package_root>/UE/TempoSample/Plugins/Tempo/TempoROS/Source/ThirdParty/rclcpp/Binaries/Windows` to your `PATH` environment variable.
+- To run an Unreal packaged game with TempoROS on Windows, you must add the directory `<package_root>/<YourProjectName>/Plugins/Tempo/TempoROS/Source/ThirdParty/rclcpp/Binaries/Windows` to your `PATH` environment variable.
 - The `Setup.sh` and prebuild code generation steps are very slow on Windows the first time they run.
