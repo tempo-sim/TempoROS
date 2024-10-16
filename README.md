@@ -5,37 +5,26 @@ This plugin was written by Tempo Simulation, LLC, and is free for anyone to use 
 
 `TempoROS`, unlike other Tempo plugins, is a standalone unit, and does not depend on the others (not even `TempoCore`). **You can use `TempoROS` even if you are not using other Tempo plugins in your project.**
 
-If you enable `TempoROS` in a project where you **are** using the other Tempo plugins you should also enable `TempoROSBridge`.
-
-> [!Note]
-> `TempoROS`, like `TempoScripting`, includes a pre-build code generation step for ROS IDL files in your project. If you're not changing ROS IDL files, and you've built at least once, you can use the `TEMPO_SKIP_PREBUILD` environment variable to skip this step. Note that you may have to restart your IDE after changing this.
+`TempoROS` supports Linux, Windows, and Mac.
 
 ## Quick Start
-
-### Clone TempoROS
+### Standalone Setup
 > [!Warning]
-> Skip this if you are using `TempoROS` as part of the rest of Tempo.
+> Skip this if you are using `TempoROS` as part of the rest of `Tempo`. `TempoROS` is a submodule of `Tempo`, and `Tempo`'s `Setup.sh` will call `TempoROS`'s `Setup.sh`.
+- Clone `TempoROS`. From your project's Plugins directory: `git submodule add https://github.com/tempo-sim/TempoROS.git`
+- Run the `Setup.sh` script (from the `TempoROS` root) once. This script will:
+  - Install third party dependencies (`rclcpp` and its dependencies)
+  - Add git hooks to update dependencies automatically
 
-From your project's Plugins directory run<br />
-`git submodule add https://github.com/tempo-sim/TempoROS.git`<br />
+If you run `Setup.sh` again it shouldn't do anything. However you can always force it to run again with the `-force` flag.
 
-### First-Time Setup
-> [!Warning]
-> Skip this if you are using `TempoROS` as part of the rest of Tempo. Tempo's `Setup.sh` will take care of it.
+### TempoROSBridge
+If you enable `TempoROS` in a project where you **are** using the other Tempo plugins you should also enable [TempoROSBridge](https://github.com/tempo-sim/Tempo/tree/release/TempoROSBridge), `Tempo`'s plugin to adapt its existing API to ROS.
 
-Run the `Setup.sh` script (from the `TempoROS` root) once. This script will:
-- Install third party dependencies (`rclcpp`)
-- Add git hooks to keep the above in sync automatically as you check out different `TempoROS` commits
-> [!Note]
-> If you run `Setup.sh` again it shouldn't do anything, because it can tell it's already run. If something goes wrong you can force it to run again with the `-force` flag.
+### Enable Exceptions
+You must enable exceptions for any module that depends on `TempoROS` or `rclcpp` by adding `bEnableExceptions = true;` to the `Build.cs` file.
 
-### Project Requirements
-`TempoROS` imposes a two requirements on your project:
-- You must enable exceptions by adding `bEnableExceptions = true;` to the `Build.cs` file for any module that depends on `TempoROS` or `rclcpp`.
-- You must specify a custom stage copy handler by adding `CustomStageCopyHandler=TempoROSCopyHandler` to your `Config/DefaultGame.ini`.
-- To run an Unreal packaged game with TempoROS on Windows, you must add the directory `<package_root>/UE/TempoSample/Plugins/Tempo/TempoROS/Source/ThirdParty/rclcpp/Binaries/Windows` to your `PATH` environment variable. We are searching for a way to remove this requirement.
-
-### TempoROS in C++
+### Using TempoROS in C++
 Using `TempoROS` from C++ is very simple:
 ```
 // Create a UTempoROSNode. UTempoROSNodes are UObjects, store them in a UPROPERTY().
@@ -53,7 +42,7 @@ ROSNode->AddSubscription<FString>("my_topic", TROSSubscriptionDelegate<FString>:
 // Publish a message.
 ROSNode->Publish("my_topic", FString("Hello World!));
 ```
-### TempoROS in Blueprint
+### Using TempoROS in Blueprint
 Using `TempoROS` from Blueprint is also straightforward. This Blueprint is equivalent to the above C++:
 <img width="1868" alt="Screenshot 2024-10-15 at 10 06 14 PM" src="https://github.com/user-attachments/assets/2e8df465-b940-43df-8823-c52b6eb12900">
 
@@ -68,7 +57,7 @@ Using `TempoROS` from Blueprint is also straightforward. This Blueprint is equiv
 `TempoROS`'s design was challenging to implement for several reasons:
 - `rclcpp` relies on several assumptions about the layout of a C++ codebase and locations of compiled libraries, so `TempoROS` attempts to satisfy those assumptions in the Unreal project's environment, including by organizing generated code in just the right way and setting several environment variables to help `rclcpp` find the libraries it needs during compilation, linking, and runtime.
 - `rclcpp` has a large number of [third party dependencies](https://raw.githubusercontent.com/ros2/ros2/humble/ros2.repos), several of which are also dependencies of Unreal. To avoid compatibility issues when combining the two systems, `TempoROS` uses a custom build of `rclcpp` linked against Unreal's third party libraries.
-- `rclcpp` uses C++ features that are not enabled by default in Unreal C++ projects, including exceptions and RTTI (`dynamic_cast` and `type_id`). To resolve the former, users must enable exceptions in modules that depend on `TempoROS` (see Project Requirements). For the latter, we've modified `rclcpp` to remove any uses of RTTI from header files.
+- `rclcpp` uses C++ features that are not enabled by default in Unreal C++ projects, including exceptions and RTTI (`dynamic_cast` and `type_id`). To resolve the former, users must enable exceptions in modules that depend on `TempoROS` (see Project Requirements). For the latter, `TempoROS` uses a modified `rclcpp` with any uses of RTTI from header files removed.
 
 ## User Guide
 ### Unreal Type Conversion
@@ -133,10 +122,14 @@ You can add a subscription to a `UTempoROSNode` like this:
 ```
 ROSNode->AddSubscription<FMyType>("my_topic", TROSSubscriptionDelegate<FMyType>::CreateUObject(this, &UMyClass::MyTypeHandler);
 ```
-It is not possible to expose templated methods to Blueprint, so we generate individual methods (e.g. `AddMyTypeSubscription`) for each type with Blueprint support.
+In the above example the handler's signature must be:
+```
+void MyTypeHandler(const FMyType&)
+```
+It is not possible to expose templated methods to Blueprint, so `TempoROS` automatically generates individual methods (e.g. `AddMyTypeSubscription`) for each type with Blueprint support.
 
-## Services
-ROS also has the concept of services, which use publishers and subscribers under the hood but offer the client the simplicity of a simple call and response. To host a ROS service you must first define the service's request and response types, like this:
+### Services
+ROS also has the concept of services, which use publishers and subscribers under the hood but offer the client the simplicity of a self-contained call and response. To host a ROS service you must first define the service's request and response types, like this:
 ```
 struct FMyService
 {
@@ -157,9 +150,29 @@ FMyResponseType UMyClass::MyServiceHandler(const FMyRequestType&)
 ### Custom Message & Service Types
 ROS supports custom message and service types defined via their [IDL](https://design.ros2.org/articles/idl_interface_definition.html). To use custom message and service types in `TempoROS`, you should define them in a special folder, `msg` or `srv` in your module's `Public` or `Private` folders.
 
-Then, `TempoROS` will generate the corresponding C++ code for your types in a pre-build step and store the generated code in a new folder, still under `Public` or `Private`, that is your module's name but `snake_cased`. You can `#include` the generated headers as you would any built-in ROS type.
+Then, `TempoROS` will generate the corresponding C++ code for your types automatically in a pre-build step and store the generated code in a new folder, still under `Public` or `Private`. By default the generated folder's name, which is also the name of the ROS package containing your custom messages and services, is your module's name but `snake_cased`. You can override this name to give your package a custom name by adding a `ros_info.json` file at the same level as your module's `Build.cs` file, with these contents:
 
-You can find many examples of defining and using custom services and messages in the `TempoROSBridge` plugin.
+```
+{
+  "custom_package_name": "my_custom_package_name"
+}
+```
+
+Once generated, you can `#include` the generated headers from C++ as you would any built-in ROS type. You can find many examples of defining and using custom services and messages in the [TempoROSBridge](https://github.com/tempo-sim/Tempo/tree/release/TempoROSBridge) plugin.
+
+> [!Note]
+> `TempoROS`, like `TempoScripting`, includes a pre-build code generation step for ROS IDL files in your project. If you are not changing ROS IDL files, and you've built at least once, you can use the `TEMPO_SKIP_PREBUILD` environment variable to skip this step. Note that you may have to restart your IDE after changing this.
+
+**Windows Only**:
+On Windows, you must add a few private preprocessor definitions to the `Build.cs` file for any module that defines custom ROS messages or services:
+```
+if (Target.Platform == UnrealTargetPlatform.Win64)
+{
+    PrivateDefinitions.Add("ROSIDL_TYPESUPPORT_FASTRTPS_CPP_BUILDING_DLL_<custom_package_name_or_module_name_snake_case>=1");
+    PrivateDefinitions.Add("ROSIDL_TYPESUPPORT_CPP_BUILDING_DLL=1");
+    PrivateDefinitions.Add("ROSIDL_TYPESUPPORT_INTROSPECTION_CPP_BUILDING_DLL=1");
+}
+```
 
 ### Clock Server
 The `/clock` topic is special in ROS because it is the only topic for which there may only be one publisher. `TempoROS` includes a `UTempoROSClockServer` subsystem, which will automatically be created and will publish the simulation time to the `/clock` channel every frame. You don't have to do anything to enable this, but be sure not to publish anything on the `/clock` channel yourself.
@@ -171,6 +184,8 @@ ROS includes [tf2](https://wiki.ros.org/tf2), a library that makes subscribing a
 - It differentiates between static and dynamic transforms, where static transforms are understood not to change, and therefore have their values "latched", meaning any node asking for a static transform (or chain of static transforms) can get an answer, even if that message containing that transform was published long ago.
 
 To use tf2 in `TempoROS`, you should use `UTempoROSNode`'s `PublishDynamicTransform`, `PublishStaticTransform`, and `GetTransform` methods, which take native Unreal types and, of course, have full Blueprint support :).
+
+<img width="1664" alt="Screenshot 2024-10-16 at 8 58 44 AM" src="https://github.com/user-attachments/assets/63816782-c70f-4c68-860e-12522d41e0ce">
 
 ### Image Transport Plugins
 ROS has a built-in type for image messages (`sensor_msgs::msg::Image`), and there is nothing stopping you from publishing messages of this type directly to a topic.
@@ -184,3 +199,12 @@ However, raw image data can be heavy, so ROS also comes with an [image transport
 - Choose `CycloneDDS` as the RMW Implementation in the TempoROS plugin settings
 - Specify the path to a valid `CycloneDDS` xml config in the `CycloneDDS URI` setting
 - Run the `roudi` server as a separate process on the same machine. `TempoROS` comes with a pre-build `roudi` (at `TempoROS/Source/ThirdParty/rclcpp/Binaries/Linux/iox-roudi`), but one from a pacakged ROS installation should also work. Note that you'll have to relax its compatibility check, with `iox-roudi -x minor`, as the one `TempoROS` linked against won't match a packaged ROS installation's exactly.
+
+## Packaging
+You can use `TempoROS` as part of a packaged game. You can find a convenient script to package the project with the recommended settings in [TempoSample](https://github.com/tempo-sim/TempoSample/blob/main/Scripts/Package.sh).
+
+To package an Unreal project with `TempoROS`, you must specify its custom stage copy handler by adding `CustomStageCopyHandler=TempoROSCopyHandler` to your `Config/DefaultGame.ini`. This allows the package process to correctly copy symbolic links in the `rclcpp` libraries on all platforms.
+
+## Known Issues
+- To run an Unreal packaged game with TempoROS on Windows, you must add the directory `<package_root>/UE/TempoSample/Plugins/Tempo/TempoROS/Source/ThirdParty/rclcpp/Binaries/Windows` to your `PATH` environment variable.
+- The `Setup.sh` and prebuild code generation steps are very slow on Windows the first time they run.
