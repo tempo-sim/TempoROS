@@ -11,9 +11,18 @@
 #define LOCTEXT_NAMESPACE "FTempoROSModule"
 
 #include "rclcpp/utilities.hpp"
-#include "rclcpp/logger.hpp"
 
 DEFINE_LOG_CATEGORY(LogTempoROS);
+
+void SetEnvironmentVar(const TCHAR* VariableName, const TCHAR* Value)
+{
+#if PLATFORM_WINDOWS
+	// On Windows only, SetEnvironmentVar does not seem to work properly, but this does.
+	_putenv_s(TCHAR_TO_UTF8(*VariableName), TCHAR_TO_UTF8(*Value));
+#else
+	FPlatformMisc::SetEnvironmentVar(VariableName, Value);
+#endif
+}
 
 void SetAmentPrefixPath()
 {
@@ -51,16 +60,21 @@ void SetAmentPrefixPath()
 #else
 	checkf(false, TEXT("Unsupported platform"));
 #endif
+#if PLATFORM_WINDOWS
+	FString LibDir = FPaths::Combine(rclcppDir, "Binaries", PlatformDir);
+#else
 	FString LibDir = FPaths::Combine(rclcppDir, "Libraries", PlatformDir);
+#endif
 	FPaths::CollapseRelativeDirectories(LibDir);
 	checkf(FPaths::DirectoryExists(*LibDir), TEXT("rclcpp library directory %s did not exist"), *LibDir);
-	FPlatformMisc::SetEnvironmentVar(TEXT("AMENT_PREFIX_PATH"), *LibDir);
+
+	SetEnvironmentVar(TEXT("AMENT_PREFIX_PATH"), *LibDir);
 }
 
 void FTempoROSModule::StartupModule()
 {
 	SetAmentPrefixPath();
-	
+
 	InitROS();
 	
 #if WITH_EDITOR
@@ -96,21 +110,44 @@ void FTempoROSModule::InitROS()
 	{
 	case ERMWImplementation::CycloneDDS:
 		{
-			FPlatformMisc::SetEnvironmentVar(TEXT("RMW_IMPLEMENTATION"), TEXT("rmw_cyclonedds_cpp"));
+			SetEnvironmentVar(TEXT("RMW_IMPLEMENTATION"), TEXT("rmw_cyclonedds_cpp"));
 			break;
 		}
 	case ERMWImplementation::FastRTPS:
 		{
-			FPlatformMisc::SetEnvironmentVar(TEXT("RMW_IMPLEMENTATION"), TEXT("rmw_fastrtps_cpp"));
+			SetEnvironmentVar(TEXT("RMW_IMPLEMENTATION"), TEXT("rmw_fastrtps_cpp"));
 			break;
 		}
 	}
 
-	// ROS_DOMAIN_ID
-	FPlatformMisc::SetEnvironmentVar(TEXT("ROS_DOMAIN_ID"), *FString::FromInt(TempoROSSettings->GetROSDomainID()));
+#if PLATFORM_LINUX
+	// CYCLONEDDS_URI
+	const FString CycloneDDS_URI = TempoROSSettings->GetCycloneDDS_URI();
+	if (!CycloneDDS_URI.IsEmpty())
+	{
+		if (FPaths::FileExists(CycloneDDS_URI))
+		{
+			SetEnvironmentVar(TEXT("CYCLONEDDS_URI"), *FString::Printf(TEXT("file://%s"), *TempoROSSettings->GetCycloneDDS_URI()));
+		}
+		else
+		{
+			UE_LOG(LogTempoROS, Error, TEXT("Configured CycloneDDS URI file not found"), *CycloneDDS_URI);
+		}
+	}
+#endif
 
-	rclcpp::init(0, nullptr);
-	
+	// ROS_DOMAIN_ID
+	SetEnvironmentVar(TEXT("ROS_DOMAIN_ID"), *FString::FromInt(TempoROSSettings->GetROSDomainID()));
+
+	try
+	{
+		rclcpp::init(0, nullptr);
+	}
+	catch (const std::exception& E)
+	{
+		UE_LOG(LogTempoROS, Error, TEXT("Failed to initialize rclcpp with error: %s"), UTF8_TO_TCHAR(E.what()));
+	}
+
 	bROSInitialized = true;
 }
 
@@ -118,8 +155,15 @@ void FTempoROSModule::ShutdownROS()
 {
 	if (bROSInitialized)
 	{
-		rclcpp::shutdown();
-	
+		try
+		{
+			rclcpp::shutdown();
+		}
+		catch (const std::exception& E)
+		{
+			UE_LOG(LogTempoROS, Error, TEXT("Failed to shut down rclcpp with error: %s"), UTF8_TO_TCHAR(E.what()));
+		}
+
 		bROSInitialized = false;
 	}
 	else

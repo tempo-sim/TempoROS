@@ -6,11 +6,6 @@
 
 set -e
 
-if [[ "$OSTYPE" != "linux-gnu"* ]]; then
-  echo "TempoROS only supports Linux right now. Come back soon!"
-  exit 1
-fi
-
 # Check for jq
 if ! which jq &> /dev/null; then
   echo "Couldn't find jq"
@@ -58,12 +53,6 @@ fi
 
 if [[ "$OSTYPE" = "msys" ]]; then
   PLATFORM="Windows"
-  # Check if we can cross compile
-  if [ -z ${LINUX_MULTIARCH_ROOT+x} ]; then
-    LINUX_CC=0
-  else
-    LINUX_CC=1
-  fi
   HASHER="md5sum"
 elif [[ "$OSTYPE" = "darwin"* ]]; then
   PLATFORM="Mac"
@@ -74,18 +63,13 @@ elif [[ "$OSTYPE" = "linux-gnu"* ]]; then
 fi
 
 TEMP=$(mktemp -d)
-
 SYNC_THIRD_PARTY_DEPS () {
   MANIFEST_FILE=$1
   FORCE_ARG=$2
   THIRD_PARTY_DIR=$(dirname "$MANIFEST_FILE")
   ARTIFACT=$(jq -r '.artifact' < "$MANIFEST_FILE")
   RELEASE_NAME=$(jq -r '.release' < "$MANIFEST_FILE")
-  if [ "$PLATFORM" = "Windows" ] && [ $LINUX_CC -ne 0 ]; then
-    EXPECTED_HASH=$(jq -r '.md5_hashes."Windows+Linux"' < "$MANIFEST_FILE")
-  else
-    EXPECTED_HASH=$(jq -r --arg platform "$PLATFORM" '.md5_hashes | .[$platform]' < "$MANIFEST_FILE")
-  fi
+  EXPECTED_HASH=$(jq -r --arg platform "$PLATFORM" '.md5_hashes | .[$platform]' < "$MANIFEST_FILE")
   
   DO_UPDATE="N"
   
@@ -96,7 +80,7 @@ SYNC_THIRD_PARTY_DEPS () {
     # shellcheck disable=SC2038
     cd "$THIRD_PARTY_DIR/$ARTIFACT"
     # awk extracts the size, date modified, and filename fields from the ls -l command
-    MEASURED_HASH=$(find . -mindepth 2 -type f -not -name ".*" -not -path "./Public/*" -not -path "./Private/*" | xargs ls -l | awk '{print $5 $6 $7 $8 $9}'| "$HASHER" | cut -d ' ' -f 1)
+    MEASURED_HASH=$(find . -mindepth 2 -type f -not -name ".*" -not -path "*/__pycache__/*" -not -path "./Public/*" -not -path "./Private/*" -print0 | xargs -0 ls -l | awk '{print $5 $6 $7 $8 $9}'| sort | "$HASHER" | cut -d ' ' -f 1)
     
     if [ "$FORCE_ARG" = "-force" ]; then
       DO_UPDATE="Y"
@@ -156,13 +140,10 @@ SYNC_THIRD_PARTY_DEPS () {
   
   # Pull the dependencies for the platform and, for Linux CC on Windows, for Linux too.
   PULL_DEPENDENCIES "$PLATFORM"
-  if [ "$PLATFORM" = "Windows" ] && [ $LINUX_CC -ne 0 ]; then
-    PULL_DEPENDENCIES "Linux"
-  fi
   
   cd "$THIRD_PARTY_DIR/$ARTIFACT"
   # awk extracts the size, date modified, and filename fields from the ls -l command
-  MEASURED_HASH=$(find . -mindepth 2 -type f -not -name ".*" -not -path "./Public/*" -not -path "./Private/*" | xargs ls -l | awk '{print $5 $6 $7 $8 $9}'| "$HASHER" | cut -d ' ' -f 1)
+  MEASURED_HASH=$(find . -mindepth 2 -type f -not -name ".*" -not -path "*/__pycache__/*" -not -path "./Public/*" -not -path "./Private/*" -print0 | xargs -0 ls -l | awk '{print $5 $6 $7 $8 $9}'| sort | "$HASHER" | cut -d ' ' -f 1)
   echo "New hash: $MEASURED_HASH"
 }
 

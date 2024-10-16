@@ -4,11 +4,28 @@
 
 #include "TempoROSConversion.h"
 
+#include "TempoROSAllocator.h"
 #include "TempoROSTypes.h"
 
 #include "rclcpp.h"
 #include "image_transport/image_transport.hpp"
 #include "sensor_msgs/msg/image.hpp"
+
+#if PLATFORM_LINUX
+namespace std::pmr
+{
+  template <class _ValueT>
+  using polymorphic_allocator = std::experimental::pmr::polymorphic_allocator<_ValueT>;
+}
+#endif
+
+inline rclcpp::PublisherOptions TempoROSPublisherOptions()
+{
+	rclcpp::PublisherOptionsWithAllocator<std::pmr::polymorphic_allocator<void>> PublisherOptions;
+	PublisherOptions.allocator = GetPolymorphicUnrealAllocator();
+	PublisherOptions.use_default_callbacks = false;
+	return PublisherOptions;
+}
 
 static FString PrependNodeName(const std::shared_ptr<rclcpp::Node>& Node, const FString& Topic)
 {
@@ -38,13 +55,36 @@ struct TTempoROSPublisher : FTempoROSPublisher
 	using ROSMessageType = typename TImplicitToROSConverter<MessageType>::ToType;
 	
 	TTempoROSPublisher(const IPublisherSupportInterface* PublisherSupport, const FString& Topic, const FROSQOSProfile& QOSProfile, bool bPrependNodeName)
-		: Node(PublisherSupport->GetNode()), Publisher(Node->create_publisher<ROSMessageType>(bPrependNodeName ? TCHAR_TO_UTF8(*PrependNodeName(Node, Topic)) : TCHAR_TO_UTF8(*Topic), QOSProfile.ToROS())) {}
-	
+		: Node(PublisherSupport->GetNode())
+	{
+		Publisher = Node->create_publisher<ROSMessageType>(
+			bPrependNodeName ? TCHAR_TO_UTF8(*PrependNodeName(Node, Topic)) : TCHAR_TO_UTF8(*Topic),
+			QOSProfile.ToROS(),
+			TempoROSPublisherOptions()
+		);
+		bUseSharedMemory = QOSProfile.bUseSharedMemory;
+#if !PLATFORM_LINUX
+		if (bUseSharedMemory)
+		{
+			UE_LOG(LogTempoROS, Warning, TEXT("Shared memory transport is only supported on Linux"));
+		}
+#endif
+	}
+
 	void Publish(const MessageType& Message) const
 	{
-		Publisher->publish(TImplicitToROSConverter<MessageType>::Convert(Message));
+		if (bUseSharedMemory)
+		{
+			rclcpp::LoanedMessage<ROSMessageType> LoanedMessage = Publisher->borrow_loaned_message();
+			LoanedMessage.get() = TImplicitToROSConverter<MessageType>::Convert(Message);
+			Publisher->publish(std::move(LoanedMessage));
+		}
+		else
+		{
+			Publisher->publish(TImplicitToROSConverter<MessageType>::Convert(Message));
+		}
 	}
-	
+
 	virtual FName GetMessageType() const override
 	{
 		return TMessageTypeTraits<MessageType>::MessageTypeDescriptor;
@@ -58,13 +98,18 @@ struct TTempoROSPublisher : FTempoROSPublisher
 private:
 	const std::shared_ptr<rclcpp::Node>& Node;
 	std::shared_ptr<rclcpp::Publisher<ROSMessageType>> Publisher;
+	bool bUseSharedMemory = false;
 };
 
 template <ImageConvertible MessageType>
 struct TTempoROSPublisher<MessageType> : FTempoROSPublisher
 {
 	TTempoROSPublisher(const IPublisherSupportInterface* PublisherSupport, const FString& Topic, const FROSQOSProfile& QOSProfile, bool bPrependNodeName)
-		: Node(PublisherSupport->GetNode()), Publisher(PublisherSupport->GetImageTransport()->advertise(bPrependNodeName ? TCHAR_TO_UTF8(*PrependNodeName(Node, Topic)) : TCHAR_TO_UTF8(*Topic), QOSProfile.QueueSize, QOSProfile.Durability == EROSQOSDurability::TransientLocal)) {}
+		: Node(PublisherSupport->GetNode()), Publisher(PublisherSupport->GetImageTransport()->advertise(
+			bPrependNodeName ? TCHAR_TO_UTF8(*PrependNodeName(Node, Topic)) : TCHAR_TO_UTF8(*Topic),
+			QOSProfile.QueueSize,
+			QOSProfile.Durability == EROSQOSDurability::TransientLocal,
+			TempoROSPublisherOptions())) {}
 	
 	void Publish(const MessageType& Message) const
 	{

@@ -1,4 +1,4 @@
-﻿// Copyright Epic Games, Inc. All Rights Reserved.
+﻿// Copyright Tempo Simulation, LLC. All Rights Reserved
 
 using UnrealBuildTool;
 
@@ -27,12 +27,19 @@ public class TempoROS : ModuleRules
 				"Engine",
 				"Slate",
 				"SlateCore",
+				// Tempo
+				"TempoROSBootstrap",
 			}
 			);
 		
 		if (Target.bBuildEditor)
 		{
-			PrivateDependencyModuleNames.Add("HotReload");
+			PrivateDependencyModuleNames.AddRange(
+				new string [] 
+			{
+				"HotReload",
+				"SettingsEditor"
+			});
 		}
 
 		// All modules that depend on rclcpp must enable exceptions.
