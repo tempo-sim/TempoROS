@@ -3,7 +3,7 @@ A plugin to integrate ROS and Unreal via `rclcpp`.
 
 This plugin was written by Tempo Simulation, LLC, and is free for anyone to use under the Apache License 2.0. Interested in learning more about Tempo? Visit us [temposimulation.com](https://temposimulation.com), or check out the full suite of [Tempo Unreal Plugins](https://github.com/tempo-sim/Tempo).
 
-`TempoROS`, unlike other Tempo plugins, is a standalone unit, and does not depend on the others (not even `TempoCore`). **You can use `TempoROS` even if you are not using other Tempo plugins in your project.**
+`TempoROS`, unlike other Tempo plugins, is a standalone unit. **You can use `TempoROS` even if you are not using other `Tempo` plugins in your project.**
 
 `TempoROS` supports Linux, Windows, and Mac.
 
@@ -22,7 +22,7 @@ If you run `Setup.sh` again it shouldn't do anything. However you can always for
 If you enable `TempoROS` in a project where you **are** using the other Tempo plugins you should also enable [TempoROSBridge](https://github.com/tempo-sim/Tempo/tree/release/TempoROSBridge), `Tempo`'s plugin to adapt its existing API to ROS.
 
 ### Enable Exceptions
-You must enable exceptions for any module that depends on `TempoROS` or `rclcpp` by adding `bEnableExceptions = true;` to the `Build.cs` file.
+You must enable exceptions for any module that depends on `TempoROS` or `rclcpp` by adding `bEnableExceptions = true;` to its `Build.cs` file.
 
 ### Using TempoROS in C++
 Using `TempoROS` from C++ is very simple:
@@ -34,16 +34,17 @@ ROSNode = UTempoROSNode::Create("MyNode", this);
 ROSNode->AddPublisher<FString>("my_topic", false /*bPrependNodeName*/);
 
 // Add a subscription.
-ROSNode->AddSubscription<FString>("my_topic", TROSSubscriptionDelegate<FString>::CreateLambda([](double FString& Message)
+ROSNode->AddSubscription<FString>("my_topic", TROSSubscriptionDelegate<FString>::CreateLambda([](const FString& Message)
 {
-    UE_LOG(LogTemp, Display, TEXT("Got a message: %s"), *Message);
+    UE_LOG(LogTemp, Display, TEXT("%s"), *Message);
 }));
 
 // Publish a message.
-ROSNode->Publish("my_topic", FString("Hello World!));
+ROSNode->Publish("my_topic", TEXT("Hello World!));
 ```
 ### Using TempoROS in Blueprint
 Using `TempoROS` from Blueprint is also straightforward. This Blueprint is equivalent to the above C++:
+
 <img width="1868" alt="Screenshot 2024-10-15 at 10 06 14 PM" src="https://github.com/user-attachments/assets/2e8df465-b940-43df-8823-c52b6eb12900">
 
 ## Design
@@ -52,7 +53,7 @@ Using `TempoROS` from Blueprint is also straightforward. This Blueprint is equiv
 `TempoROS`'s design has several notable advantages over the "bridge" alternative:
 - It avoids unnecessary serialization, deserialization, and network transport to get data in and out of the Unreal project by using ROS messages directly.
 - It leverages ROS client libraries, like `tf2` and `image_transport` enabling users to take advantage of their convenient APIs in the Unreal project.
-- It achieves zero-copy transport of messages from the Unreal project to external ROS nodes, when the two are on the same machine, using shared memory.
+- It achieves zero-copy transport of messages from the Unreal project to an external ROS node, when the two are on the same machine, using shared memory.
 
 `TempoROS`'s design was challenging to implement for several reasons:
 - `rclcpp` relies on several assumptions about the layout of a C++ codebase and locations of compiled libraries, so `TempoROS` attempts to satisfy those assumptions in the Unreal project's environment, including by organizing generated code in just the right way and setting several environment variables to help `rclcpp` find the libraries it needs during compilation, linking, and runtime.
