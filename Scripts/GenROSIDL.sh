@@ -19,6 +19,15 @@ elif [[ "$OSTYPE" = "linux-gnu"* ]]; then
   PLATFORM_FOLDER="Linux"
 fi
 
+# Using the Python that comes with Unreal
+if [[ "$OSTYPE" = "msys" ]]; then
+  PYTHON="$ENGINE_DIR/Binaries/ThirdParty/Python3/Win64/python.exe"
+elif [[ "$OSTYPE" = "darwin"* ]]; then
+  PYTHON="$ENGINE_DIR/Binaries/ThirdParty/Python3/Mac/bin/python3"
+elif [[ "$OSTYPE" = "linux-gnu"* ]]; then
+  PYTHON="$ENGINE_DIR/Binaries/ThirdParty/Python3/Linux/bin/python3"
+fi
+
 if [ -z ${PLATFORM_FOLDER+x} ]; then
   echo "Unrecognized platform."
   exit 1
@@ -43,12 +52,6 @@ if ! which jq &> /dev/null; then
     echo "Install (on Linux): sudo apt-get install jq"
   fi
   exit 1
-fi
-
-# The Linux binaries were compiled from the Windows cross-compiler
-# and they don't have their permissions set correctly.
-if [[ "$OSTYPE" = "linux-gnu"* ]]; then
-  chmod +x "$GENTOOL"
 fi
 
 # The temp directory where we will store the generated code, instead of just copying it directly to the source
@@ -145,6 +148,7 @@ GEN_MODULE_MSG_AND_SRVS() {
   MODULE_GEN_TEMP_DIR="$GEN_TEMP_DIR/$MODULE_NAME"
   mkdir -p "$MODULE_GEN_TEMP_DIR/$PACKAGE_NAME"
   if [[ "$OSTYPE" = "msys" ]]; then
+    PYTHON=$(cygpath -m "$PYTHON")
     GENTOOL=$(cygpath -m "$GENTOOL")
     MODULE_GEN_TEMP_DIR=$(cygpath -m "$MODULE_GEN_TEMP_DIR")
   fi
@@ -159,7 +163,8 @@ GEN_MODULE_MSG_AND_SRVS() {
       FILE=$(cygpath -m "$FILE")
     fi
     RELATIVE_PATH="${FILE#./}"
-    GEN_COMMAND="python3 $GENTOOL generate --type cpp --type-support cpp --type-support introspection_cpp --type-support fastrtps_cpp $PACKAGE_NAME $SOURCE_DIR:$RELATIVE_PATH -o $MODULE_GEN_TEMP_DIR/$PACKAGE_NAME"
+    GEN_COMMAND="$PYTHON $GENTOOL generate --type cpp --type-support cpp --type-support introspection_cpp --type-support fastrtps_cpp $PACKAGE_NAME $SOURCE_DIR:$RELATIVE_PATH -o $MODULE_GEN_TEMP_DIR/$PACKAGE_NAME"
+
     for SUBDIR in "$INCLUDE_DIR"/*/ ; do
         if [ -d "$SUBDIR" ]; then
             GEN_COMMAND+=" -I $(realpath "$SUBDIR")"
