@@ -19,15 +19,6 @@ elif [[ "$OSTYPE" = "linux-gnu"* ]]; then
   PLATFORM_FOLDER="Linux"
 fi
 
-# Using the Python that comes with Unreal
-if [[ "$OSTYPE" = "msys" ]]; then
-  PYTHON="$ENGINE_DIR/Binaries/ThirdParty/Python3/Win64/python.exe"
-elif [[ "$OSTYPE" = "darwin"* ]]; then
-  PYTHON="$ENGINE_DIR/Binaries/ThirdParty/Python3/Mac/bin/python3"
-elif [[ "$OSTYPE" = "linux-gnu"* ]]; then
-  PYTHON="$ENGINE_DIR/Binaries/ThirdParty/Python3/Linux/bin/python3"
-fi
-
 if [ -z ${PLATFORM_FOLDER+x} ]; then
   echo "Unrecognized platform."
   exit 1
@@ -147,8 +138,8 @@ GEN_MODULE_MSG_AND_SRVS() {
   local MODULE_GEN_TEMP_DIR
   MODULE_GEN_TEMP_DIR="$GEN_TEMP_DIR/$MODULE_NAME"
   mkdir -p "$MODULE_GEN_TEMP_DIR/$PACKAGE_NAME"
+  
   if [[ "$OSTYPE" = "msys" ]]; then
-    PYTHON=$(cygpath -m "$PYTHON")
     GENTOOL=$(cygpath -m "$GENTOOL")
     MODULE_GEN_TEMP_DIR=$(cygpath -m "$MODULE_GEN_TEMP_DIR")
   fi
@@ -163,14 +154,19 @@ GEN_MODULE_MSG_AND_SRVS() {
       FILE=$(cygpath -m "$FILE")
     fi
     RELATIVE_PATH="${FILE#./}"
-    GEN_COMMAND="$PYTHON $GENTOOL generate --type cpp --type-support cpp --type-support introspection_cpp --type-support fastrtps_cpp $PACKAGE_NAME $SOURCE_DIR:$RELATIVE_PATH -o $MODULE_GEN_TEMP_DIR/$PACKAGE_NAME"
+    GEN_COMMAND="$GENTOOL generate --type cpp --type-support cpp --type-support introspection_cpp --type-support fastrtps_cpp $PACKAGE_NAME $SOURCE_DIR:$RELATIVE_PATH -o $MODULE_GEN_TEMP_DIR/$PACKAGE_NAME"
 
     for SUBDIR in "$INCLUDE_DIR"/*/ ; do
         if [ -d "$SUBDIR" ]; then
             GEN_COMMAND+=" -I $(realpath "$SUBDIR")"
         fi
     done
-    eval "$GEN_COMMAND" 1> /dev/null
+    if [[ "$OSTYPE" = "msys" ]]; then
+      eval "$GEN_COMMAND" 1> /dev/null
+    else
+      # This is using python from the virtual environment
+      python $GEN_COMMAND 1> /dev/null
+    fi
   done
 
   cd "$MODULE_GEN_TEMP_DIR"
@@ -300,6 +296,21 @@ GEN_MODULE_MSG_AND_SRVS() {
 }
 
 echo "Generating ROS IDL code..."
+
+if [[ "$OSTYPE" != "msys" ]]; then
+  # Create and activate a virtual environment, or use the main Tempo one,
+  # using Unreal's packaged Python, and install dependencies.
+  VENV_DIR="$PROJECT_ROOT/TempoEnv"
+  if [ ! -d "$VENV_DIR" ]; then
+    "$ENGINE_DIR"/Binaries/ThirdParty/Python3/$PLATFORM_FOLDER/bin/python3 -m venv "$VENV_DIR"
+  fi
+  source "$VENV_DIR/bin/activate"
+  pip install --upgrade pip --quiet --retries 0 # One --quiet to suppress warnings but show errors
+  pip install colcon-common-extensions --quiet --retries 0
+  pip install pyyaml==6.0.2 --quiet --retries 0
+  pip install empy==3.3.4 --quiet --retries 0
+  pip install lark==1.1.1 --quiet --retries 0
+fi
 
 # Find dotnet
 cd "$ENGINE_DIR"
