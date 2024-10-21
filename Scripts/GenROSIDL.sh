@@ -6,10 +6,11 @@ set -e
 ENGINE_DIR="${1//\\//}"
 PROJECT_FILE="${2//\\//}"
 PROJECT_ROOT="${3//\\//}"
-TARGET_NAME="$4"
-TARGET_CONFIG="$5"
-TARGET_PLATFORM="$6"
-RCLCPP_DIR="${7//\\//}"
+PLUGIN_ROOT="${4//\\//}"
+TARGET_NAME="$5"
+TARGET_CONFIG="$6"
+TARGET_PLATFORM="$7"
+RCLCPP_DIR="${8//\\//}"
 
 if [[ "$OSTYPE" = "msys" ]]; then
   PLATFORM_FOLDER="Windows"
@@ -310,6 +311,11 @@ if [[ "$OSTYPE" != "msys" ]]; then
   pip install pyyaml==6.0.2 --quiet --retries 0
   pip install empy==3.3.4 --quiet --retries 0
   pip install lark==1.1.1 --quiet --retries 0
+  if [[ "$OSTYPE" = "darwin"* ]]; then
+    pip install "$PLUGIN_ROOT/Resources/netifaces/netifaces-0.11.0-cp311-cp311-macosx_10_9_universal2.whl"
+  elif [[ "$OSTYPE" = "linux-gnu"* ]]; then
+    pip install "$PLUGIN_ROOT/Resources/netifaces/netifaces-0.11.0-cp311-cp311-linux_x86_64.whl"
+  fi
 fi
 
 # Find dotnet
