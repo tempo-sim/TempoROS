@@ -313,9 +313,9 @@ if [[ "$OSTYPE" != "msys" ]]; then
   pip install empy==3.3.4 --quiet --retries 0
   pip install lark==1.1.1 --quiet --retries 0
   if [[ "$OSTYPE" = "darwin"* ]]; then
-    pip install "$PLUGIN_ROOT/Resources/netifaces/netifaces-0.11.0-cp311-cp311-macosx_10_9_universal2.whl"
+    pip install "$PLUGIN_ROOT/Resources/netifaces/netifaces-0.11.0-cp311-cp311-macosx_10_9_universal2.whl" --quiet --retries 0
   elif [[ "$OSTYPE" = "linux-gnu"* ]]; then
-    pip install "$PLUGIN_ROOT/Resources/netifaces/netifaces-0.11.0-cp311-cp311-linux_x86_64.whl"
+    pip install "$PLUGIN_ROOT/Resources/netifaces/netifaces-0.11.0-cp311-cp311-linux_x86_64.whl" --quiet --retries 0
   fi
   set -e
 fi
