@@ -14,7 +14,7 @@ fi
 
 TEMPOROS_ROOT=$(readlink -f "$TEMPOROS_ROOT")
 
-FIND_UPROJECT() {
+FIND_PROJECT_ROOT() {
     local START_DIR
     START_DIR=$(dirname "$1")
     local CURRENT_DIR="$START_DIR"
@@ -23,7 +23,7 @@ FIND_UPROJECT() {
     while [[ "$CURRENT_DIR" != "/" ]]; do
         UPROJECT_FILE=$(find "$CURRENT_DIR" -maxdepth 1 -name "*.uproject" -print -quit)
         if [[ -n "$UPROJECT_FILE" ]]; then
-            echo "$UPROJECT_FILE"
+            dirname "$UPROJECT_FILE"
             return 0
         fi
         CURRENT_DIR=$(dirname "$CURRENT_DIR")
@@ -33,10 +33,11 @@ FIND_UPROJECT() {
     return 1
 }
 
-ACTIVATE_VENV() {
+# Activates the Tempo virtual environment, which points to Unreal's python and contains ROS package
+# dependencies, if it is found.
+ACTIVATE_PYTHON_VENV() {
   if [[ "$OSTYPE" != "msys" ]]; then
-    UPROJECT_FILE=$(FIND_UPROJECT "$TEMPOROS_ROOT")
-    PROJECT_ROOT=$(dirname "$UPROJECT_FILE")
+    PROJECT_ROOT=$(FIND_PROJECT_ROOT "$TEMPOROS_ROOT")
     
     if [ ! -f "$PROJECT_ROOT/TempoEnv/bin/activate" ]; then
       echo "No Tempo Python virtual environment found. Please build (without TEMPO_SKIP_PREBUILD) first."
@@ -46,20 +47,40 @@ ACTIVATE_VENV() {
   fi
 }
 
+# Sets the specified environment variable to the specified value, or appends the specified value
+# if the environment variable is set but does not already contain the specified value.
+SET_OR_APPEND_ENV() {
+  ENV_VAR=$1
+  VALUE=$2
+  if [ -z "${ENV_VAR}" ]; then
+    export "$ENV_VAR"="$VALUE"
+  else
+    if [[ "$ENV_VAR" != *"$VALUE"* ]]; then
+      export "$ENV_VAR"="$ENV_VAR":"$VALUE"
+    fi
+  fi
+}
+
+RCLCPP_DIR="$TEMPOROS_ROOT/Source/ThirdParty/rclcpp"
+
 if [[ "$OSTYPE" = "msys" ]]; then
-  export AMENT_PREFIX_PATH="$RCLCPP_DIR/Binaries/Windows"
-  export PYTHONPATH=$PYTHONPATH:"$TEMPOROS_ROOT/Source/ThirdParty/rclcpp/Libraries/Windows/python3.11/site-packages"
-  export PATH=$PATH:"$TEMPOROS_ROOT/Source/ThirdParty/rclcpp/Binaries/Windows"
+  SET_OR_APPEND_ENV "AMENT_PREFIX_PATH" "$RCLCPP_DIR/Binaries/Windows"
+  SET_OR_APPEND_ENV "PYTHONPATH" "$RCLCPP_DIR/Libraries/Windows/python3.11/site-packages"
+  SET_OR_APPEND_ENV "PATH" "$RCLCPP_DIR/Binaries/Windows"
 elif [[ "$OSTYPE" = "darwin"* ]]; then
-  export AMENT_PREFIX_PATH="$RCLCPP_DIR/Libraries/Mac"
-  export PYTHONPATH=$PYTHONPATH:"$TEMPOROS_ROOT/Source/ThirdParty/rclcpp/Libraries/MAc/python3.11/site-packages"
-  export DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:"$TEMPOROS_ROOT/Source/ThirdParty/rclcpp/Libraries/Mac"
-  alias ros2="python $TEMPOROS_ROOT/Source/ThirdParty/rclcpp/Binaries/Mac/ros2"
-  ACTIVATE_VENV
+  SET_OR_APPEND_ENV "AMENT_PREFIX_PATH" "$RCLCPP_DIR/Libraries/Mac"
+  SET_OR_APPEND_ENV "PYTHONPATH" "$RCLCPP_DIR/Libraries/Mac/python3.11/site-packages"
+  SET_OR_APPEND_ENV "DYLD_LIBRARY_PATH" "$RCLCPP_DIR/Libraries/Mac"
+  # On Mac ros2 is a Python program, with a shebang reflecting the build machine's environment.
+  # So, make an alias to run it with the Python (from the virtual environment) explicitly.
+  alias ros2="python $RCLCPP_DIR/Binaries/Mac/ros2"
+  ACTIVATE_PYTHON_VENV
 elif [[ "$OSTYPE" = "linux-gnu"* ]]; then
-  export AMENT_PREFIX_PATH="$RCLCPP_DIR/Libraries/Linux"
-  export PYTHONPATH=$PYTHONPATH:"$TEMPOROS_ROOT/Source/ThirdParty/rclcpp/Libraries/Linux/python3.11/site-packages"
-  export LD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:"$TEMPOROS_ROOT/Source/ThirdParty/rclcpp/Libraries/Linux"
-  alias ros2="python $TEMPOROS_ROOT/Source/ThirdParty/rclcpp/Binaries/Linux/ros2"
-  ACTIVATE_VENV
+  SET_OR_APPEND_ENV "AMENT_PREFIX_PATH" "$RCLCPP_DIR/Libraries/Linux"
+  SET_OR_APPEND_ENV "PYTHONPATH" "$RCLCPP_DIR/Libraries/Linux/python3.11/site-packages"
+  SET_OR_APPEND_ENV "LD_LIBRARY_PATH" "$RCLCPP_DIR/Libraries/Linux"
+  # On Linux ros2 is a Python program, with a shebang reflecting the build machine's environment.
+  # So, make an alias to run it with the Python (from the virtual environment) explicitly.
+  alias ros2="python $RCLCPP_DIR/Binaries/Linux/ros2"
+  ACTIVATE_PYTHON_VENV
 fi
