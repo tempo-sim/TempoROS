@@ -306,6 +306,7 @@ if [[ "$OSTYPE" != "msys" ]]; then
     "$ENGINE_DIR"/Binaries/ThirdParty/Python3/$PLATFORM_FOLDER/bin/python3 -m venv "$VENV_DIR"
   fi
   source "$VENV_DIR/bin/activate"
+  set +e # Proceed despite errors from pip. That could just mean the user has no internet connection.
   pip install --upgrade pip --quiet --retries 0 # One --quiet to suppress warnings but show errors
   pip install colcon-common-extensions --quiet --retries 0
   pip install pyyaml==6.0.2 --quiet --retries 0
@@ -316,6 +317,7 @@ if [[ "$OSTYPE" != "msys" ]]; then
   elif [[ "$OSTYPE" = "linux-gnu"* ]]; then
     pip install "$PLUGIN_ROOT/Resources/netifaces/netifaces-0.11.0-cp311-cp311-linux_x86_64.whl"
   fi
+  set -e
 fi
 
 # Find dotnet
