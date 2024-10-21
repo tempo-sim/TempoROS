@@ -50,14 +50,19 @@ ACTIVATE_PYTHON_VENV() {
 # Sets the specified environment variable to the specified value, or appends the specified value
 # if the environment variable is set but does not already contain the specified value.
 SET_OR_APPEND_ENV() {
-  ENV_VAR=$1
-  VALUE=$2
-  if [ -z "${ENV_VAR}" ]; then
-    export "$ENV_VAR"="$VALUE"
+  ENV_VAR="$1"
+  VALUE="$2"
+  eval "CURRENT_VALUE=\$$ENV_VAR"
+  if [ -n "$CURRENT_VALUE" ]; then
+      # Append the new value only if it's not already present
+      if [[ "$CURRENT_VALUE" != *"$VALUE"* ]]; then
+          eval "$ENV_VAR='$CURRENT_VALUE:$VALUE'"
+          export "${ENV_VAR?}"
+      fi
   else
-    if [[ "$ENV_VAR" != *"$VALUE"* ]]; then
-      export "$ENV_VAR"="$ENV_VAR":"$VALUE"
-    fi
+      # If variable doesn't exist or is empty, set it
+      eval "$ENV_VAR='$VALUE'"
+      export "${ENV_VAR?}"
   fi
 }
 
