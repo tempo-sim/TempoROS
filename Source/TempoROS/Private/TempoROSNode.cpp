@@ -29,6 +29,8 @@ UTempoROSNode* UTempoROSNode::Create(const FString& NodeName, UObject* Outer, bo
 	catch (const std::exception& Exception)
 	{
 		UE_LOG(LogTempoROS, Error, TEXT("Failed to initialize node. Error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		NewNode->BeginDestroy();
+		return nullptr;
 	}
 	return NewNode;
 }
