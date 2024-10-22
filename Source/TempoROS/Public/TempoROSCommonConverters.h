@@ -6,6 +6,7 @@
 #include "TempoROSTypes.h"
 
 #include "std_msgs/msg/string.hpp"
+#include "geometry_msgs/msg/point.hpp"
 #include "geometry_msgs/msg/transform.hpp"
 #include "geometry_msgs/msg/twist.hpp"
 #include "rclcpp/time.hpp"
@@ -85,6 +86,20 @@ struct TImplicitToROSConverter<FVector> : TToROSConverter<geometry_msgs::msg::Ve
 		ROSVector.y = -0.01 * TempoVector.Y;
 		ROSVector.z = 0.01 * TempoVector.Z;
 		return ROSVector;
+	}
+};
+
+template<>
+struct TToROSConverter<geometry_msgs::msg::Point, FVector>
+{
+	static geometry_msgs::msg::Point Convert(const FVector& TempoPoint)
+	{
+		const geometry_msgs::msg::Vector3 ROSVector = TImplicitToROSConverter<FVector>::Convert(TempoPoint);
+		geometry_msgs::msg::Point Point;
+		Point.x = ROSVector.x;
+		Point.y = ROSVector.y;
+		Point.z = ROSVector.z;
+		return Point;
 	}
 };
 
@@ -172,5 +187,19 @@ struct TImplicitFromROSConverter<FTwist> : TFromROSConverter<geometry_msgs::msg:
 		TempoValue.LinearVelocity = TImplicitFromROSConverter<FVector>::Convert(FromValue.linear);
 		TempoValue.AngularVelocity = FMath::RadiansToDegrees(FVector(-FromValue.angular.x, FromValue.angular.y, -FromValue.angular.z));
 		return TempoValue;
+	}
+};
+
+template <>
+struct TImplicitToROSConverter<FTwist> : TToROSConverter<geometry_msgs::msg::Twist, FTwist> // TempoROS__BPSupport
+{
+	static ToType Convert(const FromType& FromValue)
+	{
+		geometry_msgs::msg::Twist ROSValue;
+		ROSValue.linear = TImplicitToROSConverter<FVector>::Convert(FromValue.LinearVelocity);
+		ROSValue.angular.x = FMath::DegreesToRadians(-FromValue.AngularVelocity.X);
+		ROSValue.angular.y = FMath::DegreesToRadians(FromValue.AngularVelocity.Y);
+		ROSValue.angular.z = FMath::DegreesToRadians(-FromValue.AngularVelocity.Z);
+		return ROSValue;
 	}
 };
