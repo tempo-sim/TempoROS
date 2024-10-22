@@ -6,9 +6,20 @@
 SHELL=$(ps -p $$ | awk '$1 != "PID" {print $(NF)}')
 
 if [[ "$SHELL" =~ "zsh" ]]; then
+  # In zsh this is the way to check if we're being sourced or run
+  # https://unix.stackexchange.com/questions/73008/how-can-a-zsh-script-test-whether-it-is-being-sourced
+  if [[ "$ZSH_EVAL_CONTEXT" == 'toplevel' ]]; then
+      echo "Don't run ROSEnv.sh, source it."
+      exit 1
+  fi
   # In zsh BASH_SOURCE is the directory where the script is called from, not the sourced file
+  # https://unix.stackexchange.com/questions/76505/unix-portable-way-to-get-scripts-absolute-path-in-zsh
   TEMPOROS_ROOT=${0:a:h}/..
 else
+  if [ "${0##*/}" = "ROSEnv.sh" ]; then
+      echo "Don't run ROSEnv.sh, source it."
+      exit 1
+  fi
   TEMPOROS_ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"/..
 fi
 
@@ -66,6 +77,11 @@ SET_OR_APPEND_ENV() {
   fi
 }
 
+if [ -n "$AMENT_PREFIX_PATH" ]; then
+  echo "It looks like you've already sourced a ROS environment. Please source in a new shell."
+  return
+fi
+
 export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
 
 RCLCPP_DIR="$TEMPOROS_ROOT/Source/ThirdParty/rclcpp"
@@ -80,7 +96,7 @@ elif [[ "$OSTYPE" = "darwin"* ]]; then
   SET_OR_APPEND_ENV "DYLD_LIBRARY_PATH" "$RCLCPP_DIR/Libraries/Mac"
   SET_OR_APPEND_ENV "PATH" "$RCLCPP_DIR/Binaries/Mac"
   # On Mac ros2 is a Python program, with a shebang reflecting the build machine's environment.
-  # So, make an alias to run it with the Python (from the virtual environment) explicitly.
+  # So, make an alias to run it with the local Python (from the virtual environment) explicitly.
   alias ros2="python $RCLCPP_DIR/Binaries/Mac/ros2"
   ACTIVATE_PYTHON_VENV
 elif [[ "$OSTYPE" = "linux-gnu"* ]]; then
@@ -89,7 +105,7 @@ elif [[ "$OSTYPE" = "linux-gnu"* ]]; then
   SET_OR_APPEND_ENV "LD_LIBRARY_PATH" "$RCLCPP_DIR/Libraries/Linux"
   SET_OR_APPEND_ENV "PATH" "$RCLCPP_DIR/Binaries/Linux"
   # On Linux ros2 is a Python program, with a shebang reflecting the build machine's environment.
-  # So, make an alias to run it with the Python (from the virtual environment) explicitly.
+  # So, make an alias to run it with the local Python (from the virtual environment) explicitly.
   alias ros2="python $RCLCPP_DIR/Binaries/Linux/ros2"
   ACTIVATE_PYTHON_VENV
 fi
