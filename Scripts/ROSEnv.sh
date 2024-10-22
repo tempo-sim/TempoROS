@@ -66,6 +66,8 @@ SET_OR_APPEND_ENV() {
   fi
 }
 
+export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+
 RCLCPP_DIR="$TEMPOROS_ROOT/Source/ThirdParty/rclcpp"
 
 if [[ "$OSTYPE" = "msys" ]]; then
@@ -76,6 +78,7 @@ elif [[ "$OSTYPE" = "darwin"* ]]; then
   SET_OR_APPEND_ENV "AMENT_PREFIX_PATH" "$RCLCPP_DIR/Libraries/Mac"
   SET_OR_APPEND_ENV "PYTHONPATH" "$RCLCPP_DIR/Libraries/Mac/python3.11/site-packages"
   SET_OR_APPEND_ENV "DYLD_LIBRARY_PATH" "$RCLCPP_DIR/Libraries/Mac"
+  SET_OR_APPEND_ENV "PATH" "$RCLCPP_DIR/Binaries/Mac"
   # On Mac ros2 is a Python program, with a shebang reflecting the build machine's environment.
   # So, make an alias to run it with the Python (from the virtual environment) explicitly.
   alias ros2="python $RCLCPP_DIR/Binaries/Mac/ros2"
@@ -84,6 +87,7 @@ elif [[ "$OSTYPE" = "linux-gnu"* ]]; then
   SET_OR_APPEND_ENV "AMENT_PREFIX_PATH" "$RCLCPP_DIR/Libraries/Linux"
   SET_OR_APPEND_ENV "PYTHONPATH" "$RCLCPP_DIR/Libraries/Linux/python3.11/site-packages"
   SET_OR_APPEND_ENV "LD_LIBRARY_PATH" "$RCLCPP_DIR/Libraries/Linux"
+  SET_OR_APPEND_ENV "PATH" "$RCLCPP_DIR/Binaries/Linux"
   # On Linux ros2 is a Python program, with a shebang reflecting the build machine's environment.
   # So, make an alias to run it with the Python (from the virtual environment) explicitly.
   alias ros2="python $RCLCPP_DIR/Binaries/Linux/ros2"
