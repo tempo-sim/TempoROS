@@ -503,6 +503,8 @@ echo "$MODULE_INFO" | jq -r -c 'to_entries[] | [.key, (.value.Directory // "")] 
   # Remove surrounding single quotes and replace any \\ with /
   MODULE_PATH=$(echo "$MODULE_PATH" | sed 's/^"//; s/"$//; s/\\\\/\//g')
   ROS_PACKAGE_NAME=$(GET_ROS_PACKAGE_NAME "$MODULE_NAME" "$MODULE_PATH")
+  # If the user has renamed the package we need to remove the stale generated package directory, identified as any with a msg/detail or srv/detail subfolder
+  find "$MODULE_PATH" -type d -not -name "$ROS_PACKAGE_NAME" -exec bash -c '[ -d "$0/msg/detail" ] || [ -d "$0/srv/detail" ]' {} \; -exec echo "Removing stale generated ROS package: {}" \; -exec rm -rf {} \; -prune
   MODULE_INCLUDES_TEMP_DIR="$INCLUDES_TEMP_DIR/$MODULE_NAME"
   GET_MODULE_INCLUDES "$MODULE_NAME" "$MODULE_INCLUDES_TEMP_DIR"
   GEN_MODULE_MSG_AND_SRVS "$MODULE_INCLUDES_TEMP_DIR" "$MODULE_PATH" "$MODULE_NAME" "$ROS_PACKAGE_NAME"
