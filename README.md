@@ -11,7 +11,9 @@ This plugin was written by Tempo Simulation, LLC, and is free for anyone to use 
 ### Standalone Setup
 > [!Warning]
 > Skip this if you are using `TempoROS` as part of the rest of `Tempo`. `TempoROS` is a submodule of `Tempo`, and `Tempo`'s `Setup.sh` will call `TempoROS`'s `Setup.sh`.
-- Clone `TempoROS`. From your project's Plugins directory: `git submodule add https://github.com/tempo-sim/TempoROS.git`
+- Clone `TempoROS`. From your project's Plugins directory:
+  - If you **are** using git to track your Unreal project: `git submodule add https://github.com/tempo-sim/TempoROS.git`
+  - If you **are not** using git to track your Unreal project: `git clone https://github.com/tempo-sim/TempoROS.git`
 - Run the `Setup.sh` script (from the `TempoROS` root) once. This script will:
   - Install third party dependencies (`rclcpp` and its dependencies)
   - Add git hooks to update dependencies automatically

@@ -6,6 +6,10 @@
 
 set -e
 
+# Set a consistent locale to ensure hashes computed below are consistent across environments.
+export LANG=C
+export LC_ALL=C
+
 # Check for jq
 if ! which jq &> /dev/null; then
   echo "Couldn't find jq"
@@ -46,8 +50,8 @@ UPROJECT_FILE=$(FIND_UPROJECT "$TEMPOROS_ROOT")
 TEMPOROS_ENABLED=$(jq '.Plugins[] | select(.Name=="TempoROS") | .Enabled' "$UPROJECT_FILE")
 # Remove any trailing carriage return character
 TEMPOROS_ENABLED="${TEMPOROS_ENABLED%$'\r'}"
-if [ "$TEMPOROS_ENABLED" != "true" ]; then
-  echo -e "Skipping check of TempoROS ThirdParty dependencies because TempoROS plugin is not enabled in $(basename "$UPROJECT_FILE")"
+if [ "$TEMPOROS_ENABLED" = "false" ]; then
+  echo -e "Skipping check of TempoROS ThirdParty dependencies because TempoROS plugin is disabled in $(basename "$UPROJECT_FILE")"
   exit 0
 fi
 
@@ -84,6 +88,10 @@ SYNC_THIRD_PARTY_DEPS () {
   if [ ! -d "$THIRD_PARTY_DIR/$ARTIFACT" ]; then
     read -r -p "Third party dependency $ARTIFACT not found in $THIRD_PARTY_DIR. Install? (y/N): " DO_UPDATE
   else
+    echo "Verifying contents of third party dependency $ARTIFACT"
+    if [[ "$OSTYPE" = "msys" ]]; then
+      echo "On Windows this can take a while. Please be patient."
+    fi
     MEASURED_HASH=$(GET_HASH "$THIRD_PARTY_DIR/$ARTIFACT")
     
     if [ "$FORCE_ARG" = "-force" ]; then
@@ -145,6 +153,10 @@ SYNC_THIRD_PARTY_DEPS () {
   # Pull the dependencies for the platform and, for Linux CC on Windows, for Linux too.
   PULL_DEPENDENCIES "$PLATFORM"
   
+  echo "Verifying contents of third party dependency $ARTIFACT"
+  if [[ "$OSTYPE" = "msys" ]]; then
+    echo "On Windows this can take a while. Please be patient."
+  fi
   MEASURED_HASH=$(GET_HASH "$THIRD_PARTY_DIR/$ARTIFACT")
   echo "New hash: $MEASURED_HASH"
 }
