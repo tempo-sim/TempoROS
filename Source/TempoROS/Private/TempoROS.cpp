@@ -18,7 +18,7 @@ void SetEnvironmentVar(const TCHAR* VariableName, const TCHAR* Value)
 {
 #if PLATFORM_WINDOWS
 	// On Windows only, SetEnvironmentVar does not seem to work properly, but this does.
-	_putenv_s(TCHAR_TO_UTF8(*VariableName), TCHAR_TO_UTF8(*Value));
+	_putenv_s(TCHAR_TO_UTF8(VariableName), TCHAR_TO_UTF8(Value));
 #else
 	FPlatformMisc::SetEnvironmentVar(VariableName, Value);
 #endif

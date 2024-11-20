@@ -6,10 +6,11 @@ set -e
 ENGINE_DIR="${1//\\//}"
 PROJECT_FILE="${2//\\//}"
 PROJECT_ROOT="${3//\\//}"
-TARGET_NAME="$4"
-TARGET_CONFIG="$5"
-TARGET_PLATFORM="$6"
-RCLCPP_DIR="${7//\\//}"
+PLUGIN_ROOT="${4//\\//}"
+TARGET_NAME="$5"
+TARGET_CONFIG="$6"
+TARGET_PLATFORM="$7"
+RCLCPP_DIR="${8//\\//}"
 
 if [[ "$OSTYPE" = "msys" ]]; then
   PLATFORM_FOLDER="Windows"
@@ -43,12 +44,6 @@ if ! which jq &> /dev/null; then
     echo "Install (on Linux): sudo apt-get install jq"
   fi
   exit 1
-fi
-
-# The Linux binaries were compiled from the Windows cross-compiler
-# and they don't have their permissions set correctly.
-if [[ "$OSTYPE" = "linux-gnu"* ]]; then
-  chmod +x "$GENTOOL"
 fi
 
 # The temp directory where we will store the generated code, instead of just copying it directly to the source
@@ -165,7 +160,12 @@ GEN_MODULE_MSG_AND_SRVS() {
             GEN_COMMAND+=" -I $(realpath "$SUBDIR")"
         fi
     done
-    eval "$GEN_COMMAND" 1> /dev/null
+    if [[ "$OSTYPE" = "msys" ]]; then
+      eval "$GEN_COMMAND" 1> /dev/null
+    else
+      # This is using python from the virtual environment
+      python $GEN_COMMAND 1> /dev/null
+    fi
   done
 
   cd "$MODULE_GEN_TEMP_DIR"
@@ -295,6 +295,31 @@ GEN_MODULE_MSG_AND_SRVS() {
 }
 
 echo "Generating ROS IDL code..."
+
+if [[ "$OSTYPE" != "msys" ]]; then
+  # Create and activate a virtual environment, or use the main Tempo one,
+  # using Unreal's packaged Python, and install dependencies.
+  VENV_DIR="$PROJECT_ROOT/TempoEnv"
+  if [ ! -d "$VENV_DIR" ]; then
+    "$ENGINE_DIR"/Binaries/ThirdParty/Python3/$PLATFORM_FOLDER/bin/python3 -m venv "$VENV_DIR"
+  fi
+  source "$VENV_DIR/bin/activate"
+  set +e # Proceed despite errors from pip. That could just mean the user has no internet connection.
+  pip install --upgrade pip --quiet --retries 0 # One --quiet to suppress warnings but show errors
+  pip install colcon-common-extensions --quiet --retries 0
+  pip install pyyaml==6.0.2 --quiet --retries 0
+  pip install empy==3.3.4 --quiet --retries 0
+  pip install lark==1.1.1 --quiet --retries 0
+  # 'pip install netifaces' builds from source, but Unreal's python config has a bunch of hard-coded
+  # paths to some engineer's machine, which makes that difficult. So we use this pre-compiled one for
+  # Python3.11 instead.
+  if [[ "$OSTYPE" = "darwin"* ]]; then
+    pip install "$PLUGIN_ROOT/Resources/netifaces/netifaces-0.11.0-cp311-cp311-macosx_10_9_universal2.whl" --quiet --retries 0
+  elif [[ "$OSTYPE" = "linux-gnu"* ]]; then
+    pip install "$PLUGIN_ROOT/Resources/netifaces/netifaces-0.11.0-cp311-cp311-linux_x86_64.whl" --quiet --retries 0
+  fi
+  set -e
+fi
 
 # Find dotnet
 cd "$ENGINE_DIR"
@@ -478,6 +503,8 @@ echo "$MODULE_INFO" | jq -r -c 'to_entries[] | [.key, (.value.Directory // "")] 
   # Remove surrounding single quotes and replace any \\ with /
   MODULE_PATH=$(echo "$MODULE_PATH" | sed 's/^"//; s/"$//; s/\\\\/\//g')
   ROS_PACKAGE_NAME=$(GET_ROS_PACKAGE_NAME "$MODULE_NAME" "$MODULE_PATH")
+  # If the user has renamed the package we need to remove the stale generated package directory, identified as any with a msg/detail or srv/detail subfolder
+  find "$MODULE_PATH" -type d -not -name "$ROS_PACKAGE_NAME" -exec bash -c '[ -d "$0/msg/detail" ] || [ -d "$0/srv/detail" ]' {} \; -exec echo "Removing stale generated ROS package: {}" \; -exec rm -rf {} \; -prune
   MODULE_INCLUDES_TEMP_DIR="$INCLUDES_TEMP_DIR/$MODULE_NAME"
   GET_MODULE_INCLUDES "$MODULE_NAME" "$MODULE_INCLUDES_TEMP_DIR"
   GEN_MODULE_MSG_AND_SRVS "$MODULE_INCLUDES_TEMP_DIR" "$MODULE_PATH" "$MODULE_NAME" "$ROS_PACKAGE_NAME"
