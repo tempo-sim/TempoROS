@@ -304,8 +304,13 @@ if [[ "$OSTYPE" != "msys" ]]; then
     "$ENGINE_DIR"/Binaries/ThirdParty/Python3/$PLATFORM_FOLDER/bin/python3 -m venv "$VENV_DIR"
   fi
   source "$VENV_DIR/bin/activate"
+  # Suppress pip's warning to upgrade to a new pip. We're using the pip version that came with Unreal, and we want to stay on it.
+  if [[ "$OSTYPE" = "msys" ]]; then
+    echo -e "[global]\ndisable-pip-version-check = true" > "$VENV_DIR/pip.ini"
+  else
+    echo -e "[global]\ndisable-pip-version-check = true" > "$VENV_DIR/pip.conf"
+  fi
   set +e # Proceed despite errors from pip. That could just mean the user has no internet connection.
-  pip install --upgrade pip --quiet --retries 0 # One --quiet to suppress warnings but show errors
   pip install colcon-common-extensions --quiet --retries 0
   pip install pyyaml==6.0.2 --quiet --retries 0
   pip install empy==3.3.4 --quiet --retries 0
