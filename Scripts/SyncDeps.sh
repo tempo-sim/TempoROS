@@ -115,7 +115,7 @@ SYNC_THIRD_PARTY_DEPS () {
   PULL_DEPENDENCIES () {
     TARGET_PLATFORM=$1
     
-    RELEASE_INFO=$(curl -n -L -J \
+    RELEASE_INFO=$(curl -L -J \
                    -H "Accept: application/vnd.github+json" \
                    -H "X-GitHub-Api-Version: 2022-11-28" \
                    https://api.github.com/repos/tempo-sim/TempoThirdParty/releases)
@@ -130,7 +130,7 @@ SYNC_THIRD_PARTY_DEPS () {
     
     echo -e "\nDownloading TempoThirdParty release $RELEASE_NAME for platform $TARGET_PLATFORM from $URL\n"
     
-    curl -n -L -J -O --output-dir "$TEMP" \
+    curl -L -J -O --output-dir "$TEMP" \
     -H "Accept: application/octet-stream" \
     -H "X-GitHub-Api-Version: 2022-11-28" \
     "$URL"
