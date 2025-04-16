@@ -1,8 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <Import Project="$(UNREAL_ENGINE_PATH)\Engine\Source\Programs\Shared\UnrealEngine.csproj.props" />
-  
-  <PropertyGroup>
+
+  <PropertyGroup Condition="'$(MSBuildRuntimeType)' == 'Core' And '$(BundledNETCoreAppTargetFrameworkVersion)' >= '8.0'">
+    <TargetFramework>net8.0</TargetFramework>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(MSBuildRuntimeType)' == 'Core' And '$(BundledNETCoreAppTargetFrameworkVersion)' &lt; '8.0'">
     <TargetFramework>net6.0</TargetFramework>
+  </PropertyGroup>
+  <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Development</Configuration>
     <OutputType>Library</OutputType>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
