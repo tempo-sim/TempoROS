@@ -15,9 +15,15 @@ UTempoROSSettings::UTempoROSSettings()
 		: RMWImplementation(ERMWImplementation::FastRTPS)
 #endif
 {
-	CategoryName = TEXT("Plugins");
-	SectionName = TEXT("Tempo ROS");
+	CategoryName = TEXT("Tempo");
 }
+
+#if WITH_EDITOR
+FText UTempoROSSettings::GetSectionText() const
+{
+	return FText::FromString(FString(TEXT("ROS")));
+}
+#endif
 
 #if WITH_EDITOR
 void UTempoROSSettings::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
