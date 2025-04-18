@@ -13,13 +13,17 @@ DECLARE_MULTICAST_DELEGATE(FTempoROSSettingsChanged);
 /**
  * TempoROS Plugin Settings.
  */
-UCLASS(Config=Plugins, DefaultConfig, DisplayName="Tempo ROS")
+UCLASS(Config=Plugins, DefaultConfig, DisplayName = "Tempo ROS Settings")
 class TEMPOROS_API UTempoROSSettings : public UDeveloperSettings
 {
 	GENERATED_BODY()
 
 public:
 	UTempoROSSettings();
+
+#if WITH_EDITOR
+	virtual FText GetSectionText() const override;
+#endif
 
 	const FString& GetFixedFrameName() const { return FixedFrameName; }
 	ERMWImplementation GetRMWImplementation() const { return RMWImplementation; }
@@ -33,18 +37,18 @@ public:
 	
 private:
 	// The name of the special "fixed" coordinate name to which all ROS TF transforms are relative.
-	UPROPERTY(EditAnywhere, Config)
+	UPROPERTY(EditAnywhere, Config, Category="TF2")
 	FString FixedFrameName = TEXT("map");
 
 	// You can have multiple ROS domains on a single local network by providing a unique ID for each.
-	UPROPERTY(EditAnywhere, Config, meta=(ClampMin=0, ClampMax=101, UIMin=0, UIMax=101))
+	UPROPERTY(EditAnywhere, Config, Category="Networking", meta=(ClampMin=0, ClampMax=101, UIMin=0, UIMax=101))
 	int32 ROSDomainID = 0;
 
 	// The middleware implementation to use. Note that on Mac only CycloneDDS is supported.
-	UPROPERTY(EditAnywhere, Config)
+	UPROPERTY(EditAnywhere, Config, Category="RMW")
 	ERMWImplementation RMWImplementation;
 
 	// Additional configuration for CycloneDDS middleware.
-	UPROPERTY(EditAnywhere, Config)
+	UPROPERTY(EditAnywhere, Config, Category="RMW|CycloneDDS")
 	FFilePath CycloneDDS_URI;
 };
