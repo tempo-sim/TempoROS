@@ -7,17 +7,7 @@
 #include "rcl/allocator.h"
 #include "rcutils/allocator.h"
 
-#if PLATFORM_LINUX
-#include <experimental/memory_resource>
-namespace std::pmr
-{
-  template <class _ValueT>
-  using polymorphic_allocator = std::experimental::pmr::polymorphic_allocator<_ValueT>;
-  using memory_resource = std::experimental::pmr::memory_resource;
-}
-#else
 #include <memory_resource>
-#endif
 
 inline void* UnrealAlloc(size_t size, void* state)
 {
