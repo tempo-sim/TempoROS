@@ -13,12 +13,12 @@ export LC_ALL=C
 # Check for UNREAL_ENGINE_PATH
 if [ -z ${UNREAL_ENGINE_PATH+x} ]; then
   echo "Please set UNREAL_ENGINE_PATH environment variable and re-run";
-  UNSUCCESSFUL_EXIT 1
+  exit 1
 fi
 
 UNREAL_ENGINE_PATH="${UNREAL_ENGINE_PATH//\\//}"
 
-# Get engine release (e.g. 5.4)
+# Get engine release (e.g. 5.6)
 if [ -f "$UNREAL_ENGINE_PATH/Engine/Intermediate/Build/BuildRules/UE5RulesManifest.json" ]; then
   UNREAL_VERSION_WITH_HOTFIX=$(jq -r '.EngineVersion' "$UNREAL_ENGINE_PATH/Engine/Intermediate/Build/BuildRules/UE5RulesManifest.json")
   UNREAL_VERSION="${UNREAL_VERSION_WITH_HOTFIX%.*}"
