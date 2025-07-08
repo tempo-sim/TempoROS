@@ -86,7 +86,12 @@ public class rclcpp : ModuleRules
                 "Core"
             }
             );
-        
+
+        if (Target.Version.MajorVersion == 5 && Target.Version.MinorVersion < 6 && Target.Platform == UnrealTargetPlatform.Linux)
+        {
+            PublicDefinitions.Add("_LIBCPP_HAS_NO_RTTI=1");
+        }
+
         if (Target.Platform == UnrealTargetPlatform.Win64)
         {
             PublicDefinitions.Add("EPROSIMA_ALL_DYN_LINK=1");

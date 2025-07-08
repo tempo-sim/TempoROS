@@ -11,6 +11,14 @@
 #include "image_transport/image_transport.hpp"
 #include "sensor_msgs/msg/image.hpp"
 
+#if PLATFORM_LINUX && ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION < 6
+namespace std::pmr
+{
+	template <class _ValueT>
+	using polymorphic_allocator = std::experimental::pmr::polymorphic_allocator<_ValueT>;
+}
+#endif
+
 inline rclcpp::PublisherOptions TempoROSPublisherOptions()
 {
 	rclcpp::PublisherOptionsWithAllocator<std::pmr::polymorphic_allocator<void>> PublisherOptions;
