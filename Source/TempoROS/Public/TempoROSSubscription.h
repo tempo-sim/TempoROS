@@ -7,11 +7,11 @@
 
 #include "rclcpp.h"
 
-#if PLATFORM_LINUX
+#if PLATFORM_LINUX && ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION < 6
 namespace std::pmr
 {
-  template <class _ValueT>
-  using polymorphic_allocator = std::experimental::pmr::polymorphic_allocator<_ValueT>;
+	template <class _ValueT>
+	using polymorphic_allocator = std::experimental::pmr::polymorphic_allocator<_ValueT>;
 }
 #endif
 
