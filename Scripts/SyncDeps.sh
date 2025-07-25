@@ -10,12 +10,9 @@ set -e
 export LANG=C
 export LC_ALL=C
 
-# Check for UNREAL_ENGINE_PATH
-if [ -z ${UNREAL_ENGINE_PATH+x} ]; then
-  echo "Please set UNREAL_ENGINE_PATH environment variable and re-run";
-  exit 1
-fi
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
+UNREAL_ENGINE_PATH=$("$SCRIPT_DIR"/FindUnreal.sh)
 UNREAL_ENGINE_PATH="${UNREAL_ENGINE_PATH//\\//}"
 
 # Get engine release (e.g. 5.6)
@@ -37,7 +34,6 @@ if ! which jq &> /dev/null; then
   exit 1
 fi
 
-SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 TEMPOROS_ROOT=$(realpath "$SCRIPT_DIR/..")
 
 FIND_UPROJECT() {
