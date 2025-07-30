@@ -7,13 +7,13 @@
 #include "rcl/allocator.h"
 #include "rcutils/allocator.h"
 
-#if PLATFORM_LINUX
+#if PLATFORM_LINUX && ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION < 6
 #include <experimental/memory_resource>
 namespace std::pmr
 {
-  template <class _ValueT>
-  using polymorphic_allocator = std::experimental::pmr::polymorphic_allocator<_ValueT>;
-  using memory_resource = std::experimental::pmr::memory_resource;
+	template <class _ValueT>
+	using polymorphic_allocator = std::experimental::pmr::polymorphic_allocator<_ValueT>;
+	using memory_resource = std::experimental::pmr::memory_resource;
 }
 #else
 #include <memory_resource>

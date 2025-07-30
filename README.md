@@ -5,7 +5,30 @@ This plugin was written by Tempo Simulation, LLC, and is free for anyone to use 
 
 `TempoROS`, unlike other Tempo plugins, is a standalone unit. **You can use `TempoROS` even if you are not using other `Tempo` plugins in your project.**
 
-`TempoROS` supports Linux, Windows, and Mac.
+## Compatibility
+- Linux (Ubuntu 22.04 and 24.04), MacOS (13.0 "Ventura" or newer, Apple silicon only), Windows 10 and 11
+- Unreal Engine 5.4, 5.5, and 5.6
+
+## Prerequisites
+- Linux:
+  - Unreal: Download and install from https://www.unrealengine.com/en-US/linux
+  - `curl`: `sudo apt update && sudo apt install curl`
+  - `jq`: `sudo apt update && sudo apt install jq`
+- Mac:
+  - Unreal: Install using Epic Games Launcher
+  - `jq`: `brew install jq`
+- Windows:
+  - Unreal: Install using Epic Games Launcher
+  - [Git Bash](https://gitforwindows.org/) (Run all Tempo `*.sh` scripts from Git Bash)
+  - `jq`: (Use Administrator Git Bash) `curl -L -o /usr/bin/jq.exe https://github.com/jqlang/jq/releases/latest/download/jq-win64.exe`
+
+## Environment Variables
+- `UNREAL_ENGINE_PATH`: Your Unreal Engine installation directory (the folder containing `Engine`)
+  - On Linux, unzip where you like, for example `~/UE_5.6`
+  - The Mac default is `/Users/Shared/Epic Games/UE_5.6`
+  - On Windows the default is `C:\Program Files\Epic Games\UE_5.6`
+> [!NOTE]
+> If you're using 5.4 or 5.5 make sure to update the paths above accordingly.
 
 ## Quick Start
 ### Standalone Setup

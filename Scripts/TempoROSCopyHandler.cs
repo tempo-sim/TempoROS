@@ -7,11 +7,11 @@ using EpicGames.Core;
 
 public static class FileUtils
 {
-    public static void CopyPreservingSymlinks(string sourcePath, string destinationPath, ILogger Logger)
+    public static bool CopyPreservingSymlinks(string sourcePath, string destinationPath, ILogger Logger)
     {
         if (File.Exists(destinationPath))
         {
-            return;
+            return false;
         }
         if (File.Exists(sourcePath))
         {
@@ -36,6 +36,8 @@ public static class FileUtils
         {
             throw new FileNotFoundException("Source file not found", sourcePath);
         }
+
+        return true;
     }
 }
 
@@ -59,13 +61,10 @@ public class TempoROSCopyHandler : CustomStageCopyHandler
     {
         if(File.Exists(SourceName))
         { 
-            FileUtils.CopyPreservingSymlinks(SourceName, TargetName, Logger);
+            return FileUtils.CopyPreservingSymlinks(SourceName, TargetName, Logger);
         }
-        else
-        {
-            Logger.LogInformation("Skip copying file {SourceName} because it doesn't exist.", SourceName);
-        }
-        
-        return true;
+
+        Logger.LogInformation("Skip copying file {SourceName} because it doesn't exist.", SourceName);
+        return false;
     }
 }

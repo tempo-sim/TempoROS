@@ -10,6 +10,17 @@ set -e
 export LANG=C
 export LC_ALL=C
 
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+
+UNREAL_ENGINE_PATH=$("$SCRIPT_DIR"/FindUnreal.sh)
+UNREAL_ENGINE_PATH="${UNREAL_ENGINE_PATH//\\//}"
+
+# Get engine release (e.g. 5.6)
+if [ -f "$UNREAL_ENGINE_PATH/Engine/Intermediate/Build/BuildRules/UE5RulesManifest.json" ]; then
+  UNREAL_VERSION_WITH_HOTFIX=$(jq -r '.EngineVersion' "$UNREAL_ENGINE_PATH/Engine/Intermediate/Build/BuildRules/UE5RulesManifest.json")
+  UNREAL_VERSION="${UNREAL_VERSION_WITH_HOTFIX%.*}"
+fi
+
 # Check for jq
 if ! which jq &> /dev/null; then
   echo "Couldn't find jq"
@@ -23,7 +34,6 @@ if ! which jq &> /dev/null; then
   exit 1
 fi
 
-SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 TEMPOROS_ROOT=$(realpath "$SCRIPT_DIR/..")
 
 FIND_UPROJECT() {
@@ -79,10 +89,24 @@ SYNC_THIRD_PARTY_DEPS () {
   MANIFEST_FILE=$1
   FORCE_ARG=$2
   THIRD_PARTY_DIR=$(dirname "$MANIFEST_FILE")
-  ARTIFACT=$(jq -r '.artifact' < "$MANIFEST_FILE")
-  RELEASE_NAME=$(jq -r '.release' < "$MANIFEST_FILE")
-  EXPECTED_HASH=$(jq -r --arg platform "$PLATFORM" '.md5_hashes | .[$platform]' < "$MANIFEST_FILE")
-  
+
+  if ! jq -e --arg unreal_version "$UNREAL_VERSION" 'has($unreal_version)' < "$MANIFEST_FILE" > /dev/null; then
+    echo "Error: TempoROS does not support Unreal Engine release $UNREAL_VERSION (found via UNREAL_ENGINE_PATH environment variable at $UNREAL_ENGINE_PATH)"
+    SUPPORTED_RELEASES=$(jq -r 'keys | join(", ")' "$MANIFEST_FILE")
+    echo "Supported Unreal Engine releases are: $SUPPORTED_RELEASES"
+    echo "Please install a supported Unreal Engine release and try again"
+    exit 1
+  fi
+
+  ARTIFACT=$(jq -r --arg unreal_version "$UNREAL_VERSION" '.[$unreal_version].artifact' < "$MANIFEST_FILE")
+  RELEASE_NAME=$(jq -r --arg unreal_version "$UNREAL_VERSION" '.[$unreal_version].release' < "$MANIFEST_FILE")
+  EXPECTED_HASH=$(jq -r --arg unreal_version "$UNREAL_VERSION" --arg platform "$PLATFORM" '.[$unreal_version].md5_hashes | .[$platform]' < "$MANIFEST_FILE")
+
+  if [[ "$EXPECTED_HASH" == "null" ]]; then
+    echo "Error: Platform '$PLATFORM' not found in md5_hashes for Unreal release '$UNREAL_VERSION'" >&2
+    exit 1
+  fi
+
   DO_UPDATE="N"
   
   if [ ! -d "$THIRD_PARTY_DIR/$ARTIFACT" ]; then
@@ -115,7 +139,7 @@ SYNC_THIRD_PARTY_DEPS () {
   PULL_DEPENDENCIES () {
     TARGET_PLATFORM=$1
     
-    RELEASE_INFO=$(curl -n -L -J \
+    RELEASE_INFO=$(curl -L -J \
                    -H "Accept: application/vnd.github+json" \
                    -H "X-GitHub-Api-Version: 2022-11-28" \
                    https://api.github.com/repos/tempo-sim/TempoThirdParty/releases)
@@ -130,7 +154,7 @@ SYNC_THIRD_PARTY_DEPS () {
     
     echo -e "\nDownloading TempoThirdParty release $RELEASE_NAME for platform $TARGET_PLATFORM from $URL\n"
     
-    curl -n -L -J -O --output-dir "$TEMP" \
+    curl -L -J -O --output-dir "$TEMP" \
     -H "Accept: application/octet-stream" \
     -H "X-GitHub-Api-Version: 2022-11-28" \
     "$URL"
