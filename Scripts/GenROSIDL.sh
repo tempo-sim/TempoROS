@@ -410,6 +410,7 @@ MODULE_INFO=$(echo "$FILTERED_MODULES" | jq -s 'add')
 # - Check that no module names are repeated
 # - Check that all ROS IDL files are in the correct locations
 echo "$MODULE_INFO" | jq -r -c 'to_entries[] | [.key, (.value.Directory // "")] | @tsv' | while IFS=$'\t' read -r MODULE_NAME MODULE_PATH; do
+  echo "Pre-processing module $MODULE_NAME"
   # Remove surrounding single quotes and replace any \\ with /
   MODULE_PATH=$(echo "$MODULE_PATH" | sed 's/^"//; s/"$//; s/\\\\/\//g')
   MODULE_SRC_TEMP_DIR="$SRC_TEMP_DIR/$MODULE_NAME"
@@ -556,6 +557,7 @@ GET_ROS_PACKAGE_NAME() {
 }
 
 echo "$MODULE_INFO" | jq -r -c 'to_entries[] | [.key, (.value.Directory // "")] | @tsv' | while IFS=$'\t' read -r MODULE_NAME MODULE_PATH; do
+  echo "Generating messages and services for module $MODULE_NAME"
   # Remove surrounding single quotes and replace any \\ with /
   MODULE_PATH=$(echo "$MODULE_PATH" | sed 's/^"//; s/"$//; s/\\\\/\//g')
   ROS_PACKAGE_NAME=$(GET_ROS_PACKAGE_NAME "$MODULE_NAME" "$MODULE_PATH")
