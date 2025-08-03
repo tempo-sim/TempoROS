@@ -312,6 +312,8 @@ elif [[ "$OSTYPE" = "linux-gnu"* ]]; then
   export CPATH="$CPATH:$ENGINE_DIR/Engine/Source/ThirdParty/Python3/Linux/include"
 fi
 
+echo "Creating virtual environment"
+
 # Create (unless a TempoEnv with the same Python already exists) and activate the virtual environment to generate the API.
 cd "$PYTHON_DIR"
 VENV_DIR="$PROJECT_ROOT/TempoEnv"
@@ -337,6 +339,9 @@ else
   source "$VENV_DIR/bin/activate"
 fi
 
+echo "Done creating virtual environment"
+echo "pip installing dependencies"
+
 # Suppress pip's warning to upgrade to a new pip. We're using the pip version that came with Unreal, and we want to stay on it.
 if [[ "$OSTYPE" = "msys" ]]; then
   echo -e "[global]\ndisable-pip-version-check = true" > "$VENV_DIR/pip.ini"
@@ -360,11 +365,16 @@ elif [[ "$OSTYPE" = "msys" ]]; then
 fi
 set -e
 
+echo "Done pip installing dependencies"
+
 # Get engine release (e.g. 5.4)
 if [ -f "$ENGINE_DIR/Engine/Intermediate/Build/BuildRules/UE5RulesManifest.json" ]; then
   RELEASE_WITH_HOTFIX=$(jq -r '.EngineVersion' "$ENGINE_DIR/Engine/Intermediate/Build/BuildRules/UE5RulesManifest.json")
   RELEASE="${RELEASE_WITH_HOTFIX%.*}"
 fi
+
+echo "Got engine release $RELEASE"
+echo "Finding dotnet"
 
 # Find dotnet
 cd "$ENGINE_DIR"
@@ -398,12 +408,16 @@ if [ -z ${DOTNET+x} ]; then
   exit 1
 fi
 
+echo "Found dotnet"
+
 # First dump a json describing all module dependencies.
-eval "$DOTNET" "./Binaries/DotNET/UnrealBuildTool/UnrealBuildTool.dll" -Mode=JsonExport "$TARGET_NAME" "$TARGET_PLATFORM" "$TARGET_CONFIG" -Project="$PROJECT_FILE" -OutputFile="$TEMP/TempoModules.json" -NoMutex > /dev/null 2>&1
+eval "$DOTNET" "./Binaries/DotNET/UnrealBuildTool/UnrealBuildTool.dll" -Mode=JsonExport "$TARGET_NAME" "$TARGET_PLATFORM" "$TARGET_CONFIG" -Project="$PROJECT_FILE" -OutputFile="$TEMP/TempoModules.json" -NoMutex
 JSON_DATA=$(cat "$TEMP/TempoModules.json")
 # Extract the public and private dependencies of all C++ project modules.
 FILTERED_MODULES=$(echo "$JSON_DATA" | jq --arg project_root "$PROJECT_ROOT" 'def normalize_path: gsub("\\\\"; "/") | if startswith("/") then . else "/" + . end; .Modules | to_entries[] | select(.value.Type == "CPlusPlus") | select((.value.Directory | normalize_path) | startswith($project_root | normalize_path)) | {(.key): {Directory: .value.Directory, PublicDependencyModules: .value.PublicDependencyModules, PrivateDependencyModules: .value.PrivateDependencyModules}}')
 MODULE_INFO=$(echo "$FILTERED_MODULES" | jq -s 'add')
+
+echo "Got module info: $MODULE_INFO"
 
 # Then iterate through all the modules to:
 # - Copy all ROS IDL files to a temp source directory - one per module!
