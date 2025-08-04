@@ -412,21 +412,25 @@ echo "Found dotnet"
 
 # First dump a json describing all module dependencies.
 eval "$DOTNET" "./Binaries/DotNET/UnrealBuildTool/UnrealBuildTool.dll" -Mode=JsonExport "$TARGET_NAME" "$TARGET_PLATFORM" "$TARGET_CONFIG" -Project="$PROJECT_FILE" -OutputFile="$TEMP/TempoModules.json" -NoMutex
+echo "Generated TempoModules.json"
 JSON_DATA=$(cat "$TEMP/TempoModules.json")
+echo "Read TempoModules.json"
 # Extract the public and private dependencies of all C++ project modules.
 FILTERED_MODULES=$(echo "$JSON_DATA" | jq --arg project_root "$PROJECT_ROOT" '
 def normalize_path: 
-  gsub("\\\\"; "/") | 
-  if startswith("/") then . else "/" + . end;
+  gsub("\\\\\\\\"; "/") | gsub("\\\\"; "/") | 
+  if startswith("/") then . else "/" + . end |
+  gsub("//"; "/") | gsub("//"; "/");
 
 .Modules | to_entries[] | 
 select(.value.Type == "CPlusPlus") | 
-select((.value.Directory | normalize_path | ascii_downcase) | startswith($project_root | normalize_path | ascii_downcase)) | 
+select((.value.Directory | normalize_path | ascii_downcase) | startswith($project_root | normalize_path | ascii_downcase)) |
 {(.key): {
   Directory: .value.Directory, 
   PublicDependencyModules: .value.PublicDependencyModules, 
   PrivateDependencyModules: .value.PrivateDependencyModules
 }}')
+echo "Filtered modules"
 MODULE_INFO=$(echo "$FILTERED_MODULES" | jq -s 'add')
 
 echo "Got module info: $MODULE_INFO"
