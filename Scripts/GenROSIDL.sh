@@ -303,13 +303,13 @@ echo "Generating ROS IDL code..."
 # So, we help pip find it, which it may need to in order to build any dependencies from source, with CPATH
 if [[ "$OSTYPE" = "msys" ]]; then
   PYTHON_DIR="$ENGINE_DIR/Binaries/ThirdParty/Python3/Win64"
-  export CPATH="$CPATH:$ENGINE_DIR/Engine/Source/ThirdParty/Python3/Win64/include"
+  export CPATH="$CPATH:$ENGINE_DIR/Source/ThirdParty/Python3/Win64/include"
 elif [[ "$OSTYPE" = "darwin"* ]]; then
   PYTHON_DIR="$ENGINE_DIR/Binaries/ThirdParty/Python3/Mac/bin"
-  export CPATH="$CPATH:$ENGINE_DIR/Engine/Source/ThirdParty/Python3/Mac/include"
+  export CPATH="$CPATH:$ENGINE_DIR/Source/ThirdParty/Python3/Mac/include"
 elif [[ "$OSTYPE" = "linux-gnu"* ]]; then
   PYTHON_DIR="$ENGINE_DIR/Binaries/ThirdParty/Python3/Linux/bin"
-  export CPATH="$CPATH:$ENGINE_DIR/Engine/Source/ThirdParty/Python3/Linux/include"
+  export CPATH="$CPATH:$ENGINE_DIR/Source/ThirdParty/Python3/Linux/include"
 fi
 
 # Create (unless a TempoEnv with the same Python already exists) and activate the virtual environment to generate the API.
@@ -361,8 +361,8 @@ fi
 set -e
 
 # Get engine release (e.g. 5.4)
-if [ -f "$ENGINE_DIR/Engine/Intermediate/Build/BuildRules/UE5RulesManifest.json" ]; then
-  RELEASE_WITH_HOTFIX=$(jq -r '.EngineVersion' "$ENGINE_DIR/Engine/Intermediate/Build/BuildRules/UE5RulesManifest.json")
+if [ -f "$ENGINE_DIR/Intermediate/Build/BuildRules/UE5RulesManifest.json" ]; then
+  RELEASE_WITH_HOTFIX=$(jq -r '.EngineVersion' "$ENGINE_DIR/Intermediate/Build/BuildRules/UE5RulesManifest.json")
   RELEASE="${RELEASE_WITH_HOTFIX%.*}"
 fi
 
