@@ -40,6 +40,9 @@ Have a question? Find us on [![Discord](https://img.shields.io/badge/Discord-Joi
 
 If you run `Setup.sh` again it shouldn't do anything. However you can always force it to run again with the `-force` flag.
 
+### Using Bundled ROS Environment
+Of course, `TempoROS` can connect to your local ROS installation. For quick CLI debugging, it also comes with its own minimal ROS environment. You can run `source ./Scripts/ROSEnv.sh` to activate it. Then you can use `ros2 topic list`, `ros2 topic echo`, etc.
+
 ### TempoROSBridge
 If you enable `TempoROS` in a project where you **are** using the other Tempo plugins you should also enable [TempoROSBridge](https://github.com/tempo-sim/Tempo/tree/release/TempoROSBridge), `Tempo`'s plugin to adapt its existing API to ROS.
 
@@ -231,3 +234,4 @@ To package an Unreal project with `TempoROS`, you must specify its custom stage 
 ## Known Issues
 - To run an Unreal packaged game with TempoROS on Windows, you must add the directory `<package_root>/<YourProjectName>/Plugins/Tempo/TempoROS/Source/ThirdParty/rclcpp/Binaries/Windows` to your `PATH` environment variable.
 - The `Setup.sh` and prebuild code generation steps are very slow on Windows the first time they run.
+- Sometimes the `GenROSIDL` prebuild steps fails with `TypeError: '>' not supported between instances of 'str' and 'int'` from `em.py`. Still debugging this, but for whatever reason it seems more likely to happen when using ssh.
