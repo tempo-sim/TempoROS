@@ -1,5 +1,5 @@
 # TempoROS
-A plugin to integrate ROS and Unreal via `rclcpp`.
+A plugin to integrate ROS 2 and Unreal via `rclcpp`.
 
 This plugin was written by Tempo Simulation, LLC, and is free for anyone to use under the Apache License 2.0. Interested in learning more about Tempo? Visit us [temposimulation.com](https://temposimulation.com), or check out the full suite of [Tempo Unreal Plugins](https://github.com/tempo-sim/Tempo).
 
@@ -10,6 +10,7 @@ Have a question? Find us on [![Discord](https://img.shields.io/badge/Discord-Joi
 ## Compatibility
 - Linux (Ubuntu 22.04 and 24.04), MacOS (13.0 "Ventura" or newer, Apple silicon only), Windows 10 and 11
 - Unreal Engine 5.4, and 5.5, and 5.6
+- ROS 2 [humble](https://docs.ros.org/en/humble/index.html)
 
 ## Prerequisites
 - Linux:
