@@ -11,9 +11,10 @@ if defined TEMPO_SKIP_PREBUILD (
 )
 
 REM Simply call the individual scripts from the same directory
-bash %~dp0GenROSIDL.sh %*
+cd /d %~dp0
+bash ./GenROSIDL.sh %*
 if %errorlevel% neq 0 exit /b %errorlevel%
-bash %~dp0GenROSBP.sh %3
+bash ./GenROSBP.sh %3
 if %errorlevel% neq 0 exit /b %errorlevel%
 
 exit /b 0
