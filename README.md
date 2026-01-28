@@ -66,7 +66,7 @@ ROSNode->AddSubscription<FString>("my_topic", TROSSubscriptionDelegate<FString>:
 }));
 
 // Publish a message.
-ROSNode->Publish("my_topic", TEXT("Hello World!"));
+ROSNode->Publish<FString>("my_topic", TEXT("Hello World!"));
 ```
 ### Using TempoROS in Blueprint
 Using `TempoROS` from Blueprint is also straightforward. This Blueprint is equivalent to the above C++:
