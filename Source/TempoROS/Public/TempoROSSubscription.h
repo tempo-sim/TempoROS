@@ -39,7 +39,7 @@ struct FTempoROSSubscription
 };
 
 template <typename MessageType>
-struct TEMPOROS_API TTempoROSSubscription : FTempoROSSubscription
+struct TTempoROSSubscription : FTempoROSSubscription
 {
 	using ROSMessageType = typename TImplicitFromROSConverter<MessageType>::FromType;
 	
