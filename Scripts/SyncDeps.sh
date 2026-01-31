@@ -76,12 +76,17 @@ fi
 # This computes a hash on the filenames, sizes, and modification time of all the third party dependency files.
 GET_HASH() {
   local ARTIFACT_DIR=$1
-  cd "$ARTIFACT_DIR"
-  if [[ "$OSTYPE" = "darwin"* ]]; then
-    find . -mindepth 2 -type f -not -name ".*" -not -path "*/__pycache__/*" -not -path "./Public/*" -not -path "./Private/*" -print0 | xargs -0 stat -f "%N%z%m" | sort | md5 | cut -d ' ' -f 1
-  else
-    find . -mindepth 2 -type f -not -name ".*" -not -path "*/__pycache__/*" -not -path "./Public/*" -not -path "./Private/*" -print0 | xargs -0 stat --format="%n%s%Y" | sort | md5sum | cut -d ' ' -f 1
+
+  # Get Unreal Python path
+  if [[ "$OSTYPE" = "msys" ]]; then
+    PYTHON_PATH="$UNREAL_ENGINE_PATH/Engine/Binaries/ThirdParty/Python3/Win64/python.exe"
+  elif [[ "$OSTYPE" = "darwin"* ]]; then
+    PYTHON_PATH="$UNREAL_ENGINE_PATH/Engine/Binaries/ThirdParty/Python3/Mac/bin/python3"
+  elif [[ "$OSTYPE" = "linux-gnu"* ]]; then
+    PYTHON_PATH="$UNREAL_ENGINE_PATH/Engine/Binaries/ThirdParty/Python3/Linux/bin/python3"
   fi
+
+  "$PYTHON_PATH" "$TEMPOROS_ROOT/Content/Python/compute_hash.py" "$ARTIFACT_DIR"
 }
 
 TEMP=$(mktemp -d)
@@ -99,7 +104,7 @@ SYNC_THIRD_PARTY_DEPS () {
   fi
 
   ARTIFACT=$(jq -r --arg unreal_version "$UNREAL_VERSION" '.[$unreal_version].artifact' < "$MANIFEST_FILE")
-  RELEASE_NAME=$(jq -r --arg unreal_version "$UNREAL_VERSION" '.[$unreal_version].release' < "$MANIFEST_FILE")
+  RELEASE_NAME=$(jq -r --arg unreal_version "$UNREAL_VERSION" --arg platform "$PLATFORM" '.[$unreal_version].release[$platform]' < "$MANIFEST_FILE")
   EXPECTED_HASH=$(jq -r --arg unreal_version "$UNREAL_VERSION" --arg platform "$PLATFORM" '.[$unreal_version].md5_hashes | .[$platform]' < "$MANIFEST_FILE")
 
   if [[ "$EXPECTED_HASH" == "null" ]]; then
@@ -113,9 +118,6 @@ SYNC_THIRD_PARTY_DEPS () {
     read -r -p "Third party dependency $ARTIFACT not found in $THIRD_PARTY_DIR. Install? (y/N): " DO_UPDATE
   else
     echo "Verifying contents of third party dependency $ARTIFACT"
-    if [[ "$OSTYPE" = "msys" ]]; then
-      echo "On Windows this can take a while. Please be patient."
-    fi
     MEASURED_HASH=$(GET_HASH "$THIRD_PARTY_DIR/$ARTIFACT")
     
     if [ "$FORCE_ARG" = "-force" ]; then
@@ -178,9 +180,6 @@ SYNC_THIRD_PARTY_DEPS () {
   PULL_DEPENDENCIES "$PLATFORM"
   
   echo "Verifying contents of third party dependency $ARTIFACT"
-  if [[ "$OSTYPE" = "msys" ]]; then
-    echo "On Windows this can take a while. Please be patient."
-  fi
   MEASURED_HASH=$(GET_HASH "$THIRD_PARTY_DIR/$ARTIFACT")
   echo "New hash: $MEASURED_HASH"
 }
