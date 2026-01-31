@@ -524,11 +524,14 @@ class ROSIDLGenerator:
             # Remove cpp/, introspection_cpp/, fastrtps_cpp/ from path (can be at start or middle)
             # Handle paths starting with these prefixes
             for prefix in ["cpp/", "introspection_cpp/", "fastrtps_cpp/"]:
+                prefix_backslash = prefix.replace("/", "\\")
                 if relative_str.startswith(prefix):
                     relative_str = relative_str[len(prefix):]
+                elif relative_str.startswith(prefix_backslash):
+                    relative_str = relative_str[len(prefix_backslash):]
                 # Also handle them in the middle of paths
                 relative_str = relative_str.replace("/" + prefix, "/")
-                relative_str = relative_str.replace("\\" + prefix.replace("/", "\\"), "\\")
+                relative_str = relative_str.replace("\\" + prefix_backslash, "\\")
 
             relative_path = Path(relative_str)
 
