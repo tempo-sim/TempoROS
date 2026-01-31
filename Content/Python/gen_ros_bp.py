@@ -1,5 +1,5 @@
 """
-Generate Blueprint function libraries for TempoROS message types.
+Generate Blueprint function libraries for modules using TempoROS.
 Copyright Tempo Simulation, LLC. All Rights Reserved
 """
 
