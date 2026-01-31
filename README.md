@@ -234,5 +234,4 @@ To package an Unreal project with `TempoROS`, you must specify its custom stage 
 
 ## Known Issues
 - To run an Unreal packaged game with TempoROS on Windows, you must add the directory `<package_root>/<YourProjectName>/Plugins/Tempo/TempoROS/Source/ThirdParty/rclcpp/Binaries/Windows` to your `PATH` environment variable.
-- The `Setup.sh` and prebuild code generation steps are very slow on Windows the first time they run.
 - Sometimes the `GenROSIDL` prebuild steps fails with `TypeError: '>' not supported between instances of 'str' and 'int'` from `em.py`. Still debugging this, but for whatever reason it seems more likely to happen when using ssh.
