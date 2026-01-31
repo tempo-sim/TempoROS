@@ -244,7 +244,7 @@ class {module_api} U{module_name}TempoROSBlueprintFunctionLibrary : public UBlue
     def run(self):
         """Main execution flow"""
         try:
-            print("Generating ROS IDL BP Support...")
+            print("Generating ROS BP Support...")
 
             self.setup_temp_dirs()
 

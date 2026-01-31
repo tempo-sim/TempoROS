@@ -571,8 +571,8 @@ class ROSIDLGenerator:
             if not filenames and not dirnames and path != directory:
                 path.rmdir()
 
-    def generate_force_export_file(self, module_path: Path, package_name: str):
-        """Generate the force_export_rosidl_typesupport_symbols.cpp file"""
+    def generate_force_export_file(self, module_path: Path, package_name: str) -> Optional[Path]:
+        """Generate the force_export_rosidl_typesupport_symbols.cpp file. Returns dest path if generated."""
         # Find all typesupport header files
         typesupport_files = []
         for visibility in ["Public", "Private"]:
@@ -581,7 +581,7 @@ class ROSIDLGenerator:
                 typesupport_files.extend(search_dir.rglob("*__rosidl_typesupport_*_cpp.hpp"))
 
         if not typesupport_files:
-            return
+            return None
 
         includes = []
         symbols = []
@@ -620,7 +620,7 @@ class ROSIDLGenerator:
             symbols.append(symbol)
 
         if not symbols:
-            return
+            return None
 
         content = f"""// Copyright Tempo Simulation, LLC. All Rights Reserved
 
@@ -657,6 +657,7 @@ volatile void* {package_name}_rosidl_typesupport_symbols[] = {{
 
         dest_file = module_path / "Private" / package_name / f"{package_name}_force_export_rosidl_typesupport_symbols.cpp"
         self.replace_if_stale(temp_file, dest_file)
+        return dest_file
 
     def generate_module_idl(self, module_name: str, module_path: Path, include_dir: Path, package_name: str):
         """Generate all IDL code for a module"""
@@ -673,12 +674,14 @@ volatile void* {package_name}_rosidl_typesupport_symbols[] = {{
         # Copy generated files
         refreshed_files = self.copy_generated_files(module_gen_temp_dir, module_path, package_name, module_name)
 
+        # Generate force export file (must be added to refreshed_files before removing stale files)
+        force_export_file = self.generate_force_export_file(module_path, package_name)
+        if force_export_file:
+            refreshed_files.add(force_export_file)
+
         # Remove stale files
         self.remove_stale_files(module_path / "Public", package_name, refreshed_files)
         self.remove_stale_files(module_path / "Private", package_name, refreshed_files)
-
-        # Generate force export file
-        self.generate_force_export_file(module_path, package_name)
 
     def run(self):
         """Main execution flow"""
