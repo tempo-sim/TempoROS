@@ -736,7 +736,7 @@ def main():
     # Check for TEMPO_SKIP_PREBUILD
     skip_prebuild = os.environ.get("TEMPO_SKIP_PREBUILD", "")
     if skip_prebuild and skip_prebuild != "0":
-        print(f"Skipping TempoROS prebuild steps because TEMPO_SKIP_PREBUILD is {skip_prebuild}")
+        print(f"Skipping TempoROS C++ IDL generation because TEMPO_SKIP_PREBUILD is {skip_prebuild}")
         return 0
 
     try:

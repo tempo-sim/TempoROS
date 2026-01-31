@@ -267,7 +267,7 @@ def main():
     # Check for TEMPO_SKIP_PREBUILD
     skip_prebuild = os.environ.get("TEMPO_SKIP_PREBUILD", "")
     if skip_prebuild and skip_prebuild != "0":
-        print(f"Skipping TempoROS prebuild steps because TEMPO_SKIP_PREBUILD is {skip_prebuild}")
+        print(f"Skipping TempoROS Blueprint function generation because TEMPO_SKIP_PREBUILD is {skip_prebuild}")
         return 0
 
     project_root = sys.argv[1]
