@@ -11,13 +11,30 @@ import tempfile
 from pathlib import Path
 from typing import List, Tuple, Set
 
+from prebuild_cache import PrebuildCache, find_files_filtered
+
 
 class ROSBlueprintGenerator:
-    def __init__(self, project_root: str):
+    def __init__(self, project_root: str, plugin_root: str):
         self.project_root = Path(project_root)
+        self.plugin_root = Path(plugin_root)
         self.temp_dir = None
         self.gen_temp_dir = None
         self.bp_keyword = "TempoROS__BPSupport"
+        self.cache = PrebuildCache(self.plugin_root / ".tempo_prebuild_cache.json")
+
+    def collect_input_files(self) -> List[Path]:
+        """Collect all files that affect Blueprint generation."""
+        files = [Path(__file__).resolve()]  # gen_ros_bp.py itself
+        # All .h files in Public directories, excluding generated library files
+        for h_file in find_files_filtered(self.project_root, {'.h'}):
+            if 'Public' in h_file.parts and not h_file.name.endswith("TempoROSBlueprintFunctionLibrary.h"):
+                files.append(h_file)
+        return files
+
+    def collect_output_files(self) -> List[Path]:
+        """Collect all generated Blueprint library files."""
+        return [f for f in find_files_filtered(self.project_root, {'TempoROSBlueprintFunctionLibrary.h'})]
 
     def setup_temp_dirs(self):
         """Create temporary directory structure"""
@@ -244,7 +261,15 @@ class {module_api} U{module_name}TempoROSBlueprintFunctionLibrary : public UBlue
     def run(self):
         """Main execution flow"""
         try:
-            print("Generating ROS BP Support...")
+            # Check cache to see if we can skip generation
+            input_files = self.collect_input_files()
+            output_files = self.collect_output_files()
+            if self.cache.is_valid("gen_ros_bp", input_files, output_files,
+                                   input_base=self.project_root, output_base=self.project_root):
+                print("[Tempo Prebuild]  Skipping TempoROS BP support generation (no changes detected)", flush=True)
+                return
+
+            print("[Tempo Prebuild] Generating ROS BP Support", flush=True)
 
             self.setup_temp_dirs()
 
@@ -253,27 +278,31 @@ class {module_api} U{module_name}TempoROSBlueprintFunctionLibrary : public UBlue
             for module_name, module_path in modules:
                 self.generate_module_bp(module_name, module_path)
 
-            print("Done")
+            # Update cache after successful generation
+            output_files = self.collect_output_files()
+            self.cache.update("gen_ros_bp", input_files, output_files,
+                              input_base=self.project_root, output_base=self.project_root)
 
         finally:
             self.cleanup_temp_dirs()
 
 
 def main():
-    if len(sys.argv) < 2:
-        print("Usage: gen_ros_bp.py <project_root>", file=sys.stderr)
+    if len(sys.argv) < 3:
+        print("Usage: gen_ros_bp.py <project_root> <plugin_root>", file=sys.stderr)
         return 1
 
     # Check for TEMPO_SKIP_PREBUILD
     skip_prebuild = os.environ.get("TEMPO_SKIP_PREBUILD", "")
     if skip_prebuild and skip_prebuild != "0":
-        print(f"Skipping TempoROS Blueprint function generation because TEMPO_SKIP_PREBUILD is {skip_prebuild}")
+        print(f"[Tempo Prebuild]  Skipping TempoROS BP support generation (TEMPO_SKIP_PREBUILD is {skip_prebuild})")
         return 0
 
     project_root = sys.argv[1]
+    plugin_root = sys.argv[2]
 
     try:
-        generator = ROSBlueprintGenerator(project_root)
+        generator = ROSBlueprintGenerator(project_root, plugin_root)
         generator.run()
         return 0
     except Exception as e:

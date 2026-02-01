@@ -15,6 +15,8 @@ import tempfile
 from pathlib import Path
 from typing import Dict, Set, Optional, List
 
+from prebuild_cache import PrebuildCache, find_files_filtered
+
 
 class ROSIDLGenerator:
     def __init__(self, args):
@@ -34,6 +36,25 @@ class ROSIDLGenerator:
         self.gen_temp_dir = None
         self.module_info = {}
         self.python_executable = None  # Path to Python executable for rosidl
+
+        self.cache = PrebuildCache(self.plugin_root / ".tempo_prebuild_cache.json")
+
+    def collect_input_files(self) -> List[Path]:
+        """Collect all files that affect ROS IDL generation."""
+        files = [Path(__file__).resolve()]  # gen_ros_idl.py itself
+        files.extend(find_files_filtered(self.project_root, {'.msg', '.srv', '.Build.cs', 'ttp_manifest.json'}))
+        return files
+
+    def collect_output_files(self) -> List[Path]:
+        """Collect all generated ROS IDL C++ files."""
+        files = []
+        # Generated files are in msg/ and srv/ subdirectories, plus force_export files
+        for f in find_files_filtered(self.project_root, {'.hpp', '.cpp'}):
+            parts = f.parts
+            # Include files in msg/ or srv/ directories, or force_export files
+            if 'msg' in parts or 'srv' in parts or '_force_export_rosidl_typesupport_symbols.cpp' in f.name:
+                files.append(f)
+        return files
 
     def get_platform_folder(self) -> str:
         """Determine platform folder name"""
@@ -686,7 +707,15 @@ volatile void* {package_name}_rosidl_typesupport_symbols[] = {{
     def run(self):
         """Main execution flow"""
         try:
-            print("Generating ROS IDL code...")
+            # Check cache to see if we can skip generation
+            input_files = self.collect_input_files()
+            output_files = self.collect_output_files()
+            if self.cache.is_valid("gen_ros_idl", input_files, output_files,
+                                   input_base=self.project_root, output_base=self.project_root):
+                print("[Tempo Prebuild]  Skipping TempoROS IDL generation (no changes detected)", flush=True)
+                return
+
+            print("[Tempo Prebuild] Generating TempoROS IDL code", flush=True)
 
             # Setup
             self.setup_environment()
@@ -717,7 +746,10 @@ volatile void* {package_name}_rosidl_typesupport_symbols[] = {{
                 self.get_module_includes(module_name, module_includes_dir)
                 self.generate_module_idl(module_name, module_path, module_includes_dir, package_name)
 
-            print("Done")
+            # Update cache after successful generation
+            output_files = self.collect_output_files()
+            self.cache.update("gen_ros_idl", input_files, output_files,
+                              input_base=self.project_root, output_base=self.project_root)
 
         finally:
             self.cleanup_temp_dirs()
@@ -739,7 +771,7 @@ def main():
     # Check for TEMPO_SKIP_PREBUILD
     skip_prebuild = os.environ.get("TEMPO_SKIP_PREBUILD", "")
     if skip_prebuild and skip_prebuild != "0":
-        print(f"Skipping TempoROS C++ IDL generation because TEMPO_SKIP_PREBUILD is {skip_prebuild}")
+        print(f"[Tempo Prebuild]  Skipping TempoROS IDL generation (TEMPO_SKIP_PREBUILD is {skip_prebuild})")
         return 0
 
     try:

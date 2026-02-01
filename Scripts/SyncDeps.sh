@@ -86,7 +86,7 @@ GET_HASH() {
     PYTHON_PATH="$UNREAL_ENGINE_PATH/Engine/Binaries/ThirdParty/Python3/Linux/bin/python3"
   fi
 
-  "$PYTHON_PATH" "$TEMPOROS_ROOT/Content/Python/compute_hash.py" "$ARTIFACT_DIR"
+  "$PYTHON_PATH" "$TEMPOROS_ROOT/Content/Python/compute_ttp_hash.py" "$ARTIFACT_DIR"
 }
 
 TEMP=$(mktemp -d)
