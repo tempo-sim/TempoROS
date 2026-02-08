@@ -1,4 +1,17 @@
 {
+  "5.7": {
+    "artifact": "rclcpp",
+    "release": {
+      "Linux": "v0.14",
+      "Mac": "v0.14.1",
+      "Windows": "v0.14.1"
+    },
+    "md5_hashes": {
+      "Linux": "415083c61fb0320d2c498245ec7ac007",
+      "Mac": "e6b0c469516c0cac9cac72b6b0156c46",
+      "Windows": "4b3d39a625d0d36baa53c795efd79212"
+    }
+  },
   "5.6": {
     "artifact": "rclcpp",
     "release": {

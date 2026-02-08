@@ -9,7 +9,7 @@ Have a question? Find us on [![Discord](https://img.shields.io/badge/Discord-Joi
 
 ## Compatibility
 - Linux (Ubuntu 22.04 and 24.04), MacOS (13.0 "Ventura" or newer, Apple silicon only), Windows 10 and 11
-- Unreal Engine 5.4, and 5.5, and 5.6
+- Unreal Engine 5.4, 5.5, 5.6, and 5.7
 - ROS 2 [humble](https://docs.ros.org/en/humble/index.html)
 
 ## Prerequisites

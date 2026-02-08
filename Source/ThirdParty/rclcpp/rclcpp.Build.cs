@@ -87,7 +87,9 @@ public class rclcpp : ModuleRules
             }
             );
 
-        if (Target.Version.MajorVersion == 5 && Target.Version.MinorVersion < 6 && Target.Platform == UnrealTargetPlatform.Linux)
+        // We need _LIBCPP_HAS_NO_RTTI to be set to avoid using RTTI in rclcpp, but it is already
+        // set in UE 5.6 (but not 5.7) in v25_clang-18.1.0-rockylinux8/x86_64-unknown-linux-gnu/include/c++/v1/__config
+        if (Target.Version.MajorVersion == 5 && Target.Version.MinorVersion != 6 && Target.Platform == UnrealTargetPlatform.Linux)
         {
             PublicDefinitions.Add("_LIBCPP_HAS_NO_RTTI=1");
         }
