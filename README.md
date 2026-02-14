@@ -228,9 +228,15 @@ However, raw image data can be heavy, so ROS also comes with an [image transport
 - Run the `roudi` server as a separate process on the same machine. `TempoROS` comes with a pre-build `roudi` (at `TempoROS/Source/ThirdParty/rclcpp/Binaries/Linux/iox-roudi`), but one from a pacakged ROS installation should also work. Note that you'll have to relax its compatibility check, with `iox-roudi -x minor`, as the one `TempoROS` linked against won't match a packaged ROS installation's exactly.
 
 ## Packaging
-You can use `TempoROS` as part of a packaged game. You can find a convenient script to package the project with the recommended settings in [TempoSample](https://github.com/tempo-sim/TempoSample/blob/main/Scripts/Package.sh).
+You can use `TempoROS` as part of a packaged game. You can find a convenient script to package the project with the recommended settings in [Tempo](https://github.com/tempo-sim/Tempo/blob/release/Scripts/Package.sh).
 
 To package an Unreal project with `TempoROS`, you must specify its custom stage copy handler by adding `CustomStageCopyHandler=TempoROSCopyHandler` to your `Config/DefaultGame.ini`. This allows the package process to correctly copy symbolic links in the `rclcpp` libraries on all platforms.
+
+If you are building using the `Package.sh` script from Tempo, this custom copy handler will be built automatically. Otherwise, you must build it yourself before
+packaging, by running the following script in `TempoROS`:
+```
+Scripts/BuildAutomation.sh
+```
 
 ## Known Issues
 - To run an Unreal packaged game with TempoROS on Windows, you must add the directory `<package_root>/<YourProjectName>/Plugins/Tempo/TempoROS/Source/ThirdParty/rclcpp/Binaries/Windows` to your `PATH` environment variable.
