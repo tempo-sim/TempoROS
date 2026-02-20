@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text.RegularExpressions;
 using UnrealBuildTool;
 
 public class rclcpp : ModuleRules
@@ -92,6 +93,47 @@ public class rclcpp : ModuleRules
         if (Target.Version.MajorVersion == 5 && Target.Version.MinorVersion != 6 && Target.Platform == UnrealTargetPlatform.Linux)
         {
             PublicDefinitions.Add("_LIBCPP_HAS_NO_RTTI=1");
+        }
+
+        // Xcode 26+ (Apple clang-1700.3+) no longer automatically defines _LIBCPP_HAS_NO_RTTI in
+        // libc++'s __config when compiling with -fno-rtti. Older Xcode versions still define it,
+        // so we check the clang build version to avoid a -Werror,-Wmacro-redefined error.
+        // Note: clang must already be installed for UBT to reach this point.
+        if (Target.Platform == UnrealTargetPlatform.Mac)
+        {
+            bool NeedNoRTTI = false;
+            try
+            {
+                var Psi = new System.Diagnostics.ProcessStartInfo("clang", "--version")
+                {
+                    RedirectStandardOutput = true,
+                    UseShellExecute = false
+                };
+                using var Proc = System.Diagnostics.Process.Start(Psi);
+                string Output = Proc.StandardOutput.ReadToEnd();
+                Proc.WaitForExit();
+                // Output contains e.g. "(clang-1700.6.3.2)" - gate on MAJOR.MINOR >= 1700.3
+                var Match = Regex.Match(Output, @"clang-(\d+)\.(\d+)\.");
+                if (Match.Success
+                    && int.TryParse(Match.Groups[1].Value, out int Major)
+                    && int.TryParse(Match.Groups[2].Value, out int Minor)
+                    && (Major > 1700 || (Major == 1700 && Minor >= 3)))
+                {
+                    NeedNoRTTI = true;
+                }
+                else if (!Match.Success)
+                {
+                    Console.WriteLine("rclcpp: Warning: could not parse clang version from: " + Output);
+                }
+            }
+            catch (Exception Ex)
+            {
+                Console.WriteLine("rclcpp: Warning: failed to query clang version: " + Ex.Message);
+            }
+            if (NeedNoRTTI)
+            {
+                PublicDefinitions.Add("_LIBCPP_HAS_NO_RTTI=1");
+            }
         }
 
         if (Target.Platform == UnrealTargetPlatform.Win64)
