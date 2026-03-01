@@ -237,6 +237,17 @@ packaging, by running the following script in `TempoROS`:
 ```
 Scripts/BuildAutomation.sh
 ```
+The NuGet vulnerability database has a warning for the version of Magick that Unreal 5.6 and 5.7 are set to use. You can work around this by adding these contents a file, `<Unreal Engine Path>/Engine/Source/Programs/AutomationTool/Directory.Build.props` before running `BuildAutomation.sh`:
+```
+<Project>
+  <PropertyGroup>
+    <!-- Disable NuGet security audit to prevent vulnerability warnings in Unreal Engine's
+         third-party packages (e.g. Magick.NET) from being treated as build errors. -->
+    <NuGetAudit>false</NuGetAudit>
+  </PropertyGroup>
+</Project>
+```
+If you are using the other Tempo plugins, this will be done automatically as part of their engine mods step.
 
 ## Known Issues
 - To run an Unreal packaged game with TempoROS on Windows, you must add the directory `<package_root>/<YourProjectName>/Plugins/Tempo/TempoROS/Source/ThirdParty/rclcpp/Binaries/Windows` to your `PATH` environment variable.
