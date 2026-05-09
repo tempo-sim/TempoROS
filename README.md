@@ -188,7 +188,7 @@ Then, `TempoROS` will generate the corresponding C++ code for your types automat
 Once generated, you can `#include` the generated headers from C++ as you would any built-in ROS type. You can find many examples of defining and using custom services and messages in the [TempoROSBridge](https://github.com/tempo-sim/Tempo/tree/release/TempoROSBridge) plugin.
 
 > [!Note]
-> `TempoROS`, like `TempoScripting`, includes a pre-build code generation step for ROS IDL files in your project. If you are not changing ROS IDL files, and you've built at least once, you can use the `TEMPO_SKIP_PREBUILD` environment variable to skip this step. Note that you may have to restart your IDE after changing this.
+> `TempoROS`, like `TempoCore`'s gRPC server, includes a pre-build code generation step for ROS IDL files in your project. If you are not changing ROS IDL files, and you've built at least once, you can use the `TEMPO_SKIP_PREBUILD` environment variable to skip this step. Note that you may have to restart your IDE after changing this.
 
 **Windows Only**:
 On Windows, you must add a few private preprocessor definitions to the `Build.cs` file for any module that defines custom ROS messages or services:
