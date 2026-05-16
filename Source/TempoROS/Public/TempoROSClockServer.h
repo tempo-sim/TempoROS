@@ -16,7 +16,7 @@ class TEMPOROS_API UTempoROSClockServer : public UWorldSubsystem
 
 public:
 	virtual bool ShouldCreateSubsystem(UObject* Outer) const override;
-	
+
 	virtual void OnWorldBeginPlay(UWorld& InWorld) override;
 
 	virtual void OnWorldPreActorTick(UWorld* World, ELevelTick TickType, float DeltaTime);

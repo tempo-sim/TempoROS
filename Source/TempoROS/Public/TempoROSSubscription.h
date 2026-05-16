@@ -42,7 +42,7 @@ template <typename MessageType>
 struct TTempoROSSubscription : FTempoROSSubscription
 {
 	using ROSMessageType = typename TImplicitFromROSConverter<MessageType>::FromType;
-	
+
 	TTempoROSSubscription(const std::shared_ptr<rclcpp::Node>& Node, const FString& Topic, const TROSSubscriptionDelegate<MessageType>& Callback, const FROSQOSProfile& QOSProfile)
 	{
 		std::shared_ptr<std::pmr::polymorphic_allocator<void>> Allocator = GetPolymorphicUnrealAllocator();
@@ -57,7 +57,7 @@ struct TTempoROSSubscription : FTempoROSSubscription
 			TempoROSSubscriptionMemoryStrategy<ROSMessageType>(Allocator)
 		);
 	}
-	
+
 private:
 	std::shared_ptr<rclcpp::Subscription<ROSMessageType>> Subscription;
 };

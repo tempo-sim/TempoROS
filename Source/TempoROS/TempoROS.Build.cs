@@ -7,7 +7,7 @@ public class TempoROS : ModuleRules
 	public TempoROS(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
-		
+
 		PublicDependencyModuleNames.AddRange(
 			new string[]
 			{
@@ -17,7 +17,7 @@ public class TempoROS : ModuleRules
 				"rclcpp",
 			}
 			);
-		
+
 		PrivateDependencyModuleNames.AddRange(
 			new string[]
 			{
@@ -31,11 +31,11 @@ public class TempoROS : ModuleRules
 				"TempoROSBootstrap",
 			}
 			);
-		
+
 		if (Target.bBuildEditor)
 		{
 			PrivateDependencyModuleNames.AddRange(
-				new string [] 
+				new string []
 			{
 				"HotReload",
 				"SettingsEditor"

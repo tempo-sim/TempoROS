@@ -37,7 +37,7 @@ void SetAmentPrefixPath()
 		PossibleTarget = FPaths::GetPath(PossibleTarget);
 	}
 #else
-	// In the packaged game we search for a directory called "rclcpp" within a directory called "ThirdParty" 
+	// In the packaged game we search for a directory called "rclcpp" within a directory called "ThirdParty"
 	IFileManager::Get().FindFilesRecursive(PossibleTargets, *ProjectPath, TEXT("rclcpp"), false, true);
 	for (auto PossibleTargetIt = PossibleTargets.CreateIterator(); PossibleTargetIt; ++PossibleTargetIt)
 	{
@@ -50,7 +50,7 @@ void SetAmentPrefixPath()
 	checkf(PossibleTargets.Num() == 1, TEXT("Expected to find exactly one rclcpp module"));
 	const FString rclcppDir = PossibleTargets[0];
 
-	// Find the Binaries and Libraries directories within rclcpp 
+	// Find the Binaries and Libraries directories within rclcpp
 #if PLATFORM_MAC
 	const FString PlatformDir(TEXT("Mac"));
 #elif PLATFORM_WINDOWS
@@ -76,7 +76,7 @@ void FTempoROSModule::StartupModule()
 	SetAmentPrefixPath();
 
 	InitROS();
-	
+
 #if WITH_EDITOR
 	IHotReloadModule::Get().OnModuleCompilerStarted().AddLambda([this](bool bIsAsyncCompile)
 	{
@@ -103,7 +103,7 @@ void FTempoROSModule::InitROS()
 	{
 		ShutdownROS();
 	}
-	
+
 	// RMW_IMPLEMENTATION
 	const UTempoROSSettings* TempoROSSettings = GetDefault<UTempoROSSettings>();
 	switch (const ERMWImplementation RMWImplementation = TempoROSSettings->GetRMWImplementation())
@@ -173,5 +173,5 @@ void FTempoROSModule::ShutdownROS()
 }
 
 #undef LOCTEXT_NAMESPACE
-	
+
 IMPLEMENT_MODULE(FTempoROSModule, TempoROS)

@@ -34,7 +34,7 @@ public:
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
-	
+
 private:
 	// The name of the special "fixed" coordinate name to which all ROS TF transforms are relative.
 	UPROPERTY(EditAnywhere, Config, Category="TF2")

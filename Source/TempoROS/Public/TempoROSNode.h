@@ -33,14 +33,14 @@ public:
 
 	static UTempoROSNode* Create(const FString& NodeName,
 								 UObject* Outer=GetTransientPackage(),
-							     bool bAutoTick=true,
-							     const rclcpp::NodeOptions& NodeOptions=rclcpp::NodeOptions(GetUnrealAllocator()));
+								 bool bAutoTick=true,
+								 const rclcpp::NodeOptions& NodeOptions=rclcpp::NodeOptions(GetUnrealAllocator()));
 
 	const TMap<FString, TUniquePtr<FTempoROSPublisher>>& GetPublishers() const { return Publishers; }
 
 	UFUNCTION(BlueprintCallable)
 	TSet<FString> GetPublishedTopics() const;
-	
+
 	template <typename MessageType>
 	bool AddPublisher(const FString& Topic, const FROSQOSProfile& QOSProfile=FROSQOSProfile(), bool bPrependNodeName=true)
 	{
@@ -104,7 +104,7 @@ public:
 		}
 		return true;
 	}
-	
+
 	template <typename MessageType>
 	bool AddSubscription(const FString& Topic, const TROSSubscriptionDelegate<MessageType>& Callback, const FROSQOSProfile& QOSProfile=FROSQOSProfile())
 	{

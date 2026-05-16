@@ -99,7 +99,7 @@ struct FTempoTFListener
 			rclcpp::QosPolicyKind::Reliability};
 		return Options;
 	}
-	
+
 	FTempoTFListener(const std::shared_ptr<rclcpp::Node>& Node)
 		: Listener(Buffer, Node, false,
 			tf2_ros::DynamicListenerQoS(), tf2_ros::DynamicListenerQoS(),

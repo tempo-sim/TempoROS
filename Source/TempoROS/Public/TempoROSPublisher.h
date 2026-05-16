@@ -53,7 +53,7 @@ template <typename MessageType>
 struct TTempoROSPublisher : FTempoROSPublisher
 {
 	using ROSMessageType = typename TImplicitToROSConverter<MessageType>::ToType;
-	
+
 	TTempoROSPublisher(const IPublisherSupportInterface* PublisherSupport, const FString& Topic, const FROSQOSProfile& QOSProfile, bool bPrependNodeName)
 		: Node(PublisherSupport->GetNode())
 	{
@@ -110,12 +110,12 @@ struct TTempoROSPublisher<MessageType> : FTempoROSPublisher
 			QOSProfile.QueueSize,
 			QOSProfile.Durability == EROSQOSDurability::TransientLocal,
 			TempoROSPublisherOptions())) {}
-	
+
 	void Publish(const MessageType& Message) const
 	{
 		Publisher.publish(TImplicitToROSConverter<MessageType>::Convert(Message));
 	}
-	
+
 	virtual FName GetMessageType() const override
 	{
 		return TMessageTypeTraits<MessageType>::MessageTypeDescriptor;

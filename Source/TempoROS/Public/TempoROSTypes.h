@@ -133,14 +133,14 @@ struct FROSQOSProfile
 		bLimitedQueueSize = false;
 		return *this;
 	}
-	
+
 	FROSQOSProfile& BestEffort()
 	{
 		checkf(!bUseSharedMemory, TEXT("Shared memory restricts other QOS options"));
 		Reliability = EROSQOSReliability::BestEffort;
 		return *this;
 	}
-	
+
 	FROSQOSProfile& Reliable()
 	{
 		Reliability = EROSQOSReliability::Reliable;
@@ -205,7 +205,7 @@ struct FROSQOSProfile
 		bCustomLeaseDuration = true;
 		return *this;
 	}
-	
+
 	rclcpp::QoS ToROS() const
 	{
 		rclcpp::QoS ROSQOS(QueueSize);

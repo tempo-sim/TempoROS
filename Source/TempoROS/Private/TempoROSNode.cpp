@@ -41,7 +41,7 @@ void UTempoROSNode::Init(const FString& NodeName, const rclcpp::NodeOptions& Nod
 	StaticTFPublisher = MakeUnique<FTempoStaticTFPublisher>(Node);
 	DynamicTFPublisher = MakeUnique<FTempoDynamicTFPublisher>(Node);
 	TFListener = MakeUnique<FTempoTFListener>(Node);
-	
+
 	if (TickWithWorld)
 	{
 		// ROS has nothing to do with movie scene sequences, but this event fires in exactly the right conditions:
