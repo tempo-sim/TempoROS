@@ -20,10 +20,10 @@ struct FTwist
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FVector LinearVelocity;
+	FVector LinearVelocity {FVector::ZeroVector};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FVector AngularVelocity;
+	FVector AngularVelocity {FVector::ZeroVector};
 };
 
 UENUM(Blueprintable, BlueprintType)
