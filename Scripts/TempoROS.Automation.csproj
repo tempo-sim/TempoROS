@@ -1,7 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <Import Project="$(UNREAL_ENGINE_PATH)\Engine\Source\Programs\Shared\UnrealEngine.csproj.props" />
 
-  <PropertyGroup Condition="'$(MSBuildRuntimeType)' == 'Core' And '$(BundledNETCoreAppTargetFrameworkVersion)' >= '8.0'">
+  <PropertyGroup Condition="'$(MSBuildRuntimeType)' == 'Core' And '$(BundledNETCoreAppTargetFrameworkVersion)' >= '10.0'">
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(MSBuildRuntimeType)' == 'Core' And '$(BundledNETCoreAppTargetFrameworkVersion)' >= '8.0' And '$(BundledNETCoreAppTargetFrameworkVersion)' &lt; '10.0'">
     <TargetFramework>net8.0</TargetFramework>
   </PropertyGroup>
   <PropertyGroup Condition="'$(MSBuildRuntimeType)' == 'Core' And '$(BundledNETCoreAppTargetFrameworkVersion)' &lt; '8.0'">
@@ -17,6 +20,9 @@
     <RootNamespace>Tempo.Automation</RootNamespace>
     <AssemblyName>Tempo.Automation</AssemblyName>
     <WarningsNotAsErrors>612,618</WarningsNotAsErrors>
+    <!-- NU1510 (new in the .NET 10 SDK used by UE 5.8) flags framework-provided packages below as
+         prunable. The code doesn't exist in the .NET 8 SDK (UE 5.6/5.7), so suppressing it is a no-op there. -->
+    <NoWarn>$(NoWarn);NU1510</NoWarn>
     <OutputPath>$(UNREAL_ENGINE_PATH)\Engine\Binaries\DotNET\AutomationTool\AutomationScripts\Tempo</OutputPath>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <DebugType>pdbonly</DebugType>
