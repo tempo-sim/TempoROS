@@ -131,7 +131,7 @@ void FTempoROSModule::InitROS()
 		}
 		else
 		{
-			UE_LOG(LogTempoROS, Error, TEXT("Configured CycloneDDS URI file not found"), *CycloneDDS_URI);
+			UE_LOG(LogTempoROS, Error, TEXT("Configured CycloneDDS URI file not found: %s"), *CycloneDDS_URI);
 		}
 	}
 #endif
