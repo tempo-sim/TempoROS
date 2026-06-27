@@ -69,7 +69,7 @@ private:
 		FMemory::Free(p);
 	}
 
-	virtual bool do_is_equal(const std::pmr::memory_resource& other) const noexcept override { return true; }
+	virtual bool do_is_equal(const std::pmr::memory_resource& other) const noexcept override { return this == &other; }
 };
 
 inline std::shared_ptr<std::pmr::polymorphic_allocator<void>> GetPolymorphicUnrealAllocator()
