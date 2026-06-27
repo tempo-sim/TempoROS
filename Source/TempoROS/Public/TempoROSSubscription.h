@@ -15,19 +15,14 @@ namespace std::pmr
 }
 #endif
 
-inline rclcpp::SubscriptionOptions TempoROSSubscriptionOptions(const std::shared_ptr<std::pmr::polymorphic_allocator<void>>& Allocator)
+inline rclcpp::SubscriptionOptions TempoROSSubscriptionOptions()
 {
-	rclcpp::SubscriptionOptionsWithAllocator<std::pmr::polymorphic_allocator<void>> SubscriptionOptions;
-	SubscriptionOptions.allocator = Allocator;
+	// rclcpp::SubscriptionOptions defaults its allocator type to std::pmr::polymorphic_allocator<void>,
+	// which picks up the default memory resource set in SetUnrealDefaultMemoryResource() at startup. The
+	// default message memory strategy likewise default-constructs its allocator from that resource.
+	rclcpp::SubscriptionOptions SubscriptionOptions;
 	SubscriptionOptions.use_default_callbacks = false;
 	return SubscriptionOptions;
-}
-
-template <typename ROSMessageType>
-inline std::shared_ptr<rclcpp::message_memory_strategy::MessageMemoryStrategy<ROSMessageType>>
-TempoROSSubscriptionMemoryStrategy(const std::shared_ptr<std::pmr::polymorphic_allocator<void>>& Allocator)
-{
-	return std::make_shared<rclcpp::message_memory_strategy::MessageMemoryStrategy<ROSMessageType>>(Allocator);
 }
 
 template <class MessageType>
@@ -45,7 +40,6 @@ struct TTempoROSSubscription : FTempoROSSubscription
 
 	TTempoROSSubscription(const std::shared_ptr<rclcpp::Node>& Node, const FString& Topic, const TROSSubscriptionDelegate<MessageType>& Callback, const FROSQOSProfile& QOSProfile)
 	{
-		std::shared_ptr<std::pmr::polymorphic_allocator<void>> Allocator = GetPolymorphicUnrealAllocator();
 		Subscription = Node->create_subscription<ROSMessageType>(
 			TCHAR_TO_UTF8(*Topic),
 			QOSProfile.ToROS(),
@@ -53,8 +47,7 @@ struct TTempoROSSubscription : FTempoROSSubscription
 			{
 			  Callback.ExecuteIfBound(TImplicitFromROSConverter<MessageType>::Convert(Message));
 			},
-			TempoROSSubscriptionOptions(Allocator),
-			TempoROSSubscriptionMemoryStrategy<ROSMessageType>(Allocator)
+			TempoROSSubscriptionOptions()
 		);
 	}
 
