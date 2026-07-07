@@ -29,6 +29,7 @@ public:
 	ERMWImplementation GetRMWImplementation() const { return RMWImplementation; }
 	FString GetCycloneDDS_URI() const { return CycloneDDS_URI.FilePath; }
 	int32 GetROSDomainID() const { return ROSDomainID; }
+	bool GetPublishClock() const { return bPublishClock; }
 	FTempoROSSettingsChanged TempoROSSettingsChangedEvent;
 
 #if WITH_EDITOR
@@ -39,6 +40,11 @@ private:
 	// The name of the special "fixed" coordinate name to which all ROS TF transforms are relative.
 	UPROPERTY(EditAnywhere, Config, Category="TF2")
 	FString FixedFrameName = TEXT("map");
+
+	// Whether to publish the world's time on the /clock topic (on which only one node may publish).
+	// Disable this when Tempo runs alongside another simulator that is the ROS time authority.
+	UPROPERTY(EditAnywhere, Config, Category="Time")
+	bool bPublishClock = true;
 
 	// You can have multiple ROS domains on a single local network by providing a unique ID for each.
 	UPROPERTY(EditAnywhere, Config, Category="Networking", meta=(ClampMin=0, ClampMax=101, UIMin=0, UIMax=101))

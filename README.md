@@ -202,7 +202,7 @@ if (Target.Platform == UnrealTargetPlatform.Win64)
 ```
 
 ### Clock Server
-The `/clock` topic is special in ROS because it is the only topic for which there may only be one publisher. `TempoROS` includes a `UTempoROSClockServer` subsystem, which will automatically be created and will publish the simulation time to the `/clock` channel every frame. You don't have to do anything to enable this, but be sure not to publish anything on the `/clock` channel yourself.
+The `/clock` topic is special in ROS because it is the only topic for which there may only be one publisher. `TempoROS` includes a `UTempoROSClockServer` subsystem, which will automatically be created and will publish the simulation time to the `/clock` channel every frame. You don't have to do anything to enable this, but be sure not to publish anything on the `/clock` channel yourself. If something else in your ROS graph is the time authority (for example, another simulator publishing to `/clock`), you can disable the clock server by unchecking `Publish Clock` in the TempoROS plugin settings.
 
 ### TF2
 ROS includes [tf2](https://wiki.ros.org/tf2), a library that makes subscribing and publishing a graph of transforms more convenient. Some advantages over publishing raw transform messages include:

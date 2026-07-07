@@ -3,6 +3,7 @@
 #include "TempoROSClockServer.h"
 
 #include "TempoROSCommonConverters.h"
+#include "TempoROSSettings.h"
 
 #include "rosgraph_msgs/msg/clock.hpp"
 
@@ -21,6 +22,11 @@ struct TImplicitToROSConverter<double> : TToROSConverter<rosgraph_msgs::msg::Clo
 
 bool UTempoROSClockServer::ShouldCreateSubsystem(UObject* Outer) const
 {
+	if (!GetDefault<UTempoROSSettings>()->GetPublishClock())
+	{
+		return false;
+	}
+
 	const EWorldType::Type WorldType = Outer->GetWorld()->WorldType;
 	if (WorldType == EWorldType::Game || WorldType == EWorldType::PIE)
 	{
