@@ -169,6 +169,7 @@ SYNC_THIRD_PARTY_DEPS () {
     echo -e "\nDownloading TempoThirdParty release $RELEASE_NAME for platform $TARGET_PLATFORM from $URL\n"
     
     curl -L -J -O --output-dir "$TEMP" \
+    "${AUTH_HEADER[@]}" \
     -H "Accept: application/octet-stream" \
     -H "X-GitHub-Api-Version: 2022-11-28" \
     "$URL"
