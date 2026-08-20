@@ -145,7 +145,10 @@ void FTempoROSModule::InitROS()
 	}
 	catch (const std::exception& E)
 	{
-		UE_LOG(LogTempoROS, Error, TEXT("Failed to initialize rclcpp with error: %s"), UTF8_TO_TCHAR(E.what()));
+		// Leave bROSInitialized false. Otherwise the failure is silent here and only resurfaces later,
+		// as a confusing error from every UTempoROSNode::Create call against an uninitialized context.
+		UE_LOG(LogTempoROS, Error, TEXT("Failed to initialize rclcpp with error: %s. TempoROS will be unavailable."), UTF8_TO_TCHAR(E.what()));
+		return;
 	}
 
 	bROSInitialized = true;
