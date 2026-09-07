@@ -73,11 +73,6 @@ private:
 	virtual bool do_is_equal(const std::pmr::memory_resource& other) const noexcept override { return true; }
 };
 
-inline std::shared_ptr<std::pmr::polymorphic_allocator<void>> GetPolymorphicUnrealAllocator()
-{
-	return std::make_shared<std::pmr::polymorphic_allocator<void>>(&UnrealMemoryResource::Instance);
-}
-
 // Make UnrealMemoryResource the process-wide default for std::pmr. Because rclcpp's default allocator
 // type is std::pmr::polymorphic_allocator<void> (see TempoThirdParty patches), every allocator rclcpp
 // default-constructs internally then routes through FMemory, without TempoROS having to thread an
