@@ -14,29 +14,25 @@ FName TMessageTypeTraits<MessageType>::MessageTypeDescriptor = FName(NAME_None);
 #define DEFINE_TEMPOROS_MESSAGE_TYPE_TRAITS(MessageType) \
 template <> inline FName TMessageTypeTraits<MessageType>::MessageTypeDescriptor = FName(#MessageType);
 
-template <typename T>
+// Base class for all converters. Parameterized directly on the To/From types so that the default
+// (identity) Convert can be declared without ever needing the derived type. Specializations provide
+// their own static Convert, which hides this default.
+template <typename ToT, typename FromT>
 struct TConverter
 {
-	// From kennytm's answer here: https://stackoverflow.com/questions/8113878/c-crtp-and-accessing-deriveds-nested-typedefs-from-base
-	template <typename X = T>
-	using ToType = typename X::ToType;
+	using ToType = ToT;
+	using FromType = FromT;
 
-	template <typename X = T>
-	using FromType = typename X::FromType;
-
-	template <typename X = T>
-	static typename X::ToType Convert(const typename X::FromType& FromValue)
+	static ToType Convert(const FromType& FromValue)
 	{
-		static_assert(std::is_same_v<typename X::ToType, typename X::FromType>, "No specialization found to convert these types");
+		static_assert(std::is_same_v<ToType, FromType>, "No specialization found to convert these types");
 		return FromValue;
 	}
 };
 
 template <typename ROSType, typename TempoType>
-struct TToROSConverter : TConverter<TToROSConverter<ROSType, TempoType>>
+struct TToROSConverter : TConverter<ROSType, TempoType>
 {
-	using ToType = ROSType;
-	using FromType = TempoType;
 };
 
 template <typename T>
@@ -46,10 +42,8 @@ struct TImplicitToROSConverter : TToROSConverter<T, T>
 };
 
 template <typename ROSType, typename TempoType>
-struct TFromROSConverter : TConverter<TFromROSConverter<ROSType, TempoType>>
+struct TFromROSConverter : TConverter<TempoType, ROSType>
 {
-	using ToType = TempoType;
-	using FromType = ROSType;
 };
 
 template <typename T>

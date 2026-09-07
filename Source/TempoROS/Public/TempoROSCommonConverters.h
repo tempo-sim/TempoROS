@@ -18,7 +18,7 @@ DEFINE_TEMPOROS_MESSAGE_TYPE_TRAITS(FTransform)
 DEFINE_TEMPOROS_MESSAGE_TYPE_TRAITS(FTwist)
 
 template <>
-struct TToROSConverter<std::string, FString> : TConverter<TToROSConverter<std::string, FString>>
+struct TToROSConverter<std::string, FString> : TConverter<std::string, FString>
 {
 	static std::string Convert(const FString& FromValue)
 	{
@@ -27,7 +27,7 @@ struct TToROSConverter<std::string, FString> : TConverter<TToROSConverter<std::s
 };
 
 template <>
-struct TFromROSConverter<std::string, FString> : TConverter<TFromROSConverter<std::string, FString>>
+struct TFromROSConverter<std::string, FString> : TConverter<FString, std::string>
 {
 	static FString Convert(const std::string& FromValue)
 	{
@@ -56,7 +56,7 @@ struct TImplicitFromROSConverter<FString> : TFromROSConverter<std_msgs::msg::Str
 };
 
 template <>
-struct TToROSConverter<builtin_interfaces::msg::Time, double> : TConverter<TToROSConverter<builtin_interfaces::msg::Time, double>>
+struct TToROSConverter<builtin_interfaces::msg::Time, double> : TConverter<builtin_interfaces::msg::Time, double>
 {
 	static builtin_interfaces::msg::Time Convert(double FromValue)
 	{
@@ -68,7 +68,7 @@ struct TToROSConverter<builtin_interfaces::msg::Time, double> : TConverter<TToRO
 };
 
 template <>
-struct TFromROSConverter<builtin_interfaces::msg::Time, double> : TConverter<TFromROSConverter<builtin_interfaces::msg::Time, double>>
+struct TFromROSConverter<builtin_interfaces::msg::Time, double> : TConverter<double, builtin_interfaces::msg::Time>
 {
 	static double Convert(builtin_interfaces::msg::Time FromValue)
 	{
@@ -116,7 +116,7 @@ struct TImplicitFromROSConverter<FVector> : TFromROSConverter<geometry_msgs::msg
 // https://gamedev.stackexchange.com/questions/157946/converting-a-quaternion-in-a-right-to-left-handed-coordinate-system
 
 template <>
-struct TToROSConverter<geometry_msgs::msg::Quaternion, FQuat> : TConverter<TToROSConverter<geometry_msgs::msg::Quaternion, FQuat>>
+struct TToROSConverter<geometry_msgs::msg::Quaternion, FQuat> : TConverter<geometry_msgs::msg::Quaternion, FQuat>
 {
 	static geometry_msgs::msg::Quaternion Convert(const FQuat& TempoValue)
 	{
@@ -130,7 +130,7 @@ struct TToROSConverter<geometry_msgs::msg::Quaternion, FQuat> : TConverter<TToRO
 };
 
 template <>
-struct TFromROSConverter<geometry_msgs::msg::Quaternion, FQuat> : TConverter<TFromROSConverter<geometry_msgs::msg::Quaternion, FQuat>>
+struct TFromROSConverter<geometry_msgs::msg::Quaternion, FQuat> : TConverter<FQuat, geometry_msgs::msg::Quaternion>
 {
 	static FQuat Convert(const geometry_msgs::msg::Quaternion& ROSValue)
 	{
