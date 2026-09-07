@@ -33,13 +33,14 @@ SYNCDEPS="$TEMPO_ROOT/Scripts/SyncDeps.sh"
 
 # Put SyncDeps.sh script in appropriate git hooks
 if [ -d "$GIT_DIR/hooks" ]; then
-  ADD_COMMAND_TO_HOOK "$SYNCDEPS" post-checkout
-  ADD_COMMAND_TO_HOOK "$SYNCDEPS" post-merge
+  ADD_COMMAND_TO_HOOK "\"$SYNCDEPS\"" post-checkout
+  ADD_COMMAND_TO_HOOK "\"$SYNCDEPS\"" post-merge
 fi
 
 # Run the steps once (adding -force if specified)
 echo -e "Checking ThirdParty dependencies...\n"
+SYNCDEPS_ARGS=()
 if [ "$1" = "-force" ]; then
-  SYNCDEPS="$SYNCDEPS -force"
+  SYNCDEPS_ARGS+=("-force")
 fi
-eval "$SYNCDEPS"
+"$SYNCDEPS" "${SYNCDEPS_ARGS[@]}"

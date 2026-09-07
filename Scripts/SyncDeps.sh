@@ -197,8 +197,12 @@ SYNC_THIRD_PARTY_DEPS () {
   echo "New hash: $MEASURED_HASH"
 }
 
-MANIFEST_FILES=$(find "$TEMPOROS_ROOT" -name ttp_manifest.json -path "*Source*")
-for MANIFEST_FILE in ${MANIFEST_FILES[@]}; do
+MANIFEST_FILES=()
+while IFS= read -r -d '' manifest_file; do
+  MANIFEST_FILES+=("$manifest_file")
+done < <(find "$TEMPOROS_ROOT" -name ttp_manifest.json -path "*Source*" -print0)
+
+for MANIFEST_FILE in "${MANIFEST_FILES[@]}"; do
   SYNC_THIRD_PARTY_DEPS "$MANIFEST_FILE" "$1"
 done
 
