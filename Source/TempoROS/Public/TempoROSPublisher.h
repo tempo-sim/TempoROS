@@ -21,8 +21,9 @@ namespace std::pmr
 
 inline rclcpp::PublisherOptions TempoROSPublisherOptions()
 {
-	rclcpp::PublisherOptionsWithAllocator<std::pmr::polymorphic_allocator<void>> PublisherOptions;
-	PublisherOptions.allocator = GetPolymorphicUnrealAllocator();
+	// rclcpp::PublisherOptions defaults its allocator type to std::pmr::polymorphic_allocator<void>,
+	// which picks up the default memory resource set in SetUnrealDefaultMemoryResource() at startup.
+	rclcpp::PublisherOptions PublisherOptions;
 	PublisherOptions.use_default_callbacks = false;
 	return PublisherOptions;
 }

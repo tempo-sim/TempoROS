@@ -2,6 +2,7 @@
 
 #include "TempoROS.h"
 
+#include "TempoROSAllocator.h"
 #include "TempoROSSettings.h"
 
 #if WITH_EDITOR
@@ -73,6 +74,9 @@ void SetAmentPrefixPath()
 
 void FTempoROSModule::StartupModule()
 {
+	// Route rclcpp's default std::pmr allocations through Unreal's allocator before anything in rclcpp runs.
+	SetUnrealDefaultMemoryResource();
+
 	SetAmentPrefixPath();
 
 	InitROS();

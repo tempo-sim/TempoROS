@@ -81,7 +81,7 @@ struct FTempoTFListener
 {
 	static rclcpp::SubscriptionOptions SubOptions()
 	{
-		rclcpp::SubscriptionOptions Options = TempoROSSubscriptionOptions(GetPolymorphicUnrealAllocator());
+		rclcpp::SubscriptionOptions Options = TempoROSSubscriptionOptions();
 		Options.qos_overriding_options = rclcpp::QosOverridingOptions{
 			rclcpp::QosPolicyKind::Depth,
 			rclcpp::QosPolicyKind::Durability,
@@ -92,7 +92,7 @@ struct FTempoTFListener
 
 	static rclcpp::SubscriptionOptions StaticSubOptions()
 	{
-		rclcpp::SubscriptionOptions Options = TempoROSSubscriptionOptions(GetPolymorphicUnrealAllocator());
+		rclcpp::SubscriptionOptions Options = TempoROSSubscriptionOptions();
 		Options.qos_overriding_options = rclcpp::QosOverridingOptions{
 			rclcpp::QosPolicyKind::Depth,
 			rclcpp::QosPolicyKind::History,

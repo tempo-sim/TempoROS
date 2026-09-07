@@ -14,6 +14,7 @@ namespace std::pmr
 	template <class _ValueT>
 	using polymorphic_allocator = std::experimental::pmr::polymorphic_allocator<_ValueT>;
 	using memory_resource = std::experimental::pmr::memory_resource;
+	using std::experimental::pmr::set_default_resource;
 }
 #else
 #include <memory_resource>
@@ -72,7 +73,12 @@ private:
 	virtual bool do_is_equal(const std::pmr::memory_resource& other) const noexcept override { return true; }
 };
 
-inline std::shared_ptr<std::pmr::polymorphic_allocator<void>> GetPolymorphicUnrealAllocator()
+// Make UnrealMemoryResource the process-wide default for std::pmr. Because rclcpp's default allocator
+// type is std::pmr::polymorphic_allocator<void> (see TempoThirdParty patches), every allocator rclcpp
+// default-constructs internally then routes through FMemory, without TempoROS having to thread an
+// allocator into every publisher/subscription/memory-strategy explicitly. Call once at startup, before
+// any rclcpp allocation occurs.
+inline void SetUnrealDefaultMemoryResource()
 {
-	return std::make_shared<std::pmr::polymorphic_allocator<void>>(&UnrealMemoryResource::Instance);
+	std::pmr::set_default_resource(&UnrealMemoryResource::Instance);
 }
