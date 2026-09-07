@@ -31,7 +31,10 @@ FIND_UPROJECT_FILE() {
         return 0
     fi
 
-    local UPROJECT_FILEs=($(find "$search_path" -maxdepth 1 -name "*.uproject" 2>/dev/null))
+    local UPROJECT_FILEs=()
+    while IFS= read -r -d '' uproject_file; do
+        UPROJECT_FILEs+=("$uproject_file")
+    done < <(find "$search_path" -maxdepth 1 -name "*.uproject" -print0 2>/dev/null)
 
     if [[ ${#UPROJECT_FILEs[@]} -eq 0 ]]; then
         echo "Error: No .uproject file found in $search_path" >&2
