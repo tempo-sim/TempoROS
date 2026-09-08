@@ -101,6 +101,12 @@ void FTempoROSModule::ShutdownModule()
 	ShutdownROS();
 }
 
+bool FTempoROSModule::IsROSInitialized()
+{
+	const FTempoROSModule* TempoROSModule = FModuleManager::GetModulePtr<FTempoROSModule>(TEXT("TempoROS"));
+	return TempoROSModule != nullptr && TempoROSModule->bROSInitialized;
+}
+
 void FTempoROSModule::InitROS()
 {
 	if (bROSInitialized)

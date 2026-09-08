@@ -7,8 +7,26 @@ UTempoROSNode* UTempoROSNodeBlueprintFunctionLibrary::CreateTempoROSNode(const F
 	return UTempoROSNode::Create(NodeName, Owner, bAutoTick);
 }
 
+UTempoROSNode* UTempoROSNode::Create(const FString& NodeName, UObject* Outer, bool bAutoTick)
+{
+	// Check before constructing the NodeOptions, which touches rclcpp and throws without a ROS context.
+	if (!FTempoROSModule::IsROSInitialized())
+	{
+		UE_LOG(LogTempoROS, Error, TEXT("Cannot create TempoROS node %s because ROS is not initialized. See earlier LogTempoROS errors."), *NodeName);
+		return nullptr;
+	}
+
+	return Create(NodeName, Outer, bAutoTick, rclcpp::NodeOptions(GetUnrealAllocator()));
+}
+
 UTempoROSNode* UTempoROSNode::Create(const FString& NodeName, UObject* Outer, bool bAutoTick, const rclcpp::NodeOptions& NodeOptions)
 {
+	if (!FTempoROSModule::IsROSInitialized())
+	{
+		UE_LOG(LogTempoROS, Error, TEXT("Cannot create TempoROS node %s because ROS is not initialized. See earlier LogTempoROS errors."), *NodeName);
+		return nullptr;
+	}
+
 	UTempoROSNode* NewNode = NewObject<UTempoROSNode>(Outer);
 	UWorld* TickWithWorld = nullptr;
 	if (bAutoTick)

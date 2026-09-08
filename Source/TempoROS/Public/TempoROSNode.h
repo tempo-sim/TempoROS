@@ -31,10 +31,18 @@ class TEMPOROS_API UTempoROSNode: public UObject, public IPublisherSupportInterf
 public:
 	UTempoROSNode() = default;
 
+	// NodeOptions is deliberately an overload rather than a defaulted parameter. A default argument is
+	// constructed in the *caller's* frame, so defaulting it to an rclcpp::NodeOptions would run rclcpp
+	// code before Create is entered - outside its ROS-initialized check and outside its try/catch. With
+	// no valid ROS context that construction throws, and the exception escapes to kill the process.
 	static UTempoROSNode* Create(const FString& NodeName,
 								 UObject* Outer=GetTransientPackage(),
-								 bool bAutoTick=true,
-								 const rclcpp::NodeOptions& NodeOptions=rclcpp::NodeOptions(GetUnrealAllocator()));
+								 bool bAutoTick=true);
+
+	static UTempoROSNode* Create(const FString& NodeName,
+								 UObject* Outer,
+								 bool bAutoTick,
+								 const rclcpp::NodeOptions& NodeOptions);
 
 	const TMap<FString, TUniquePtr<FTempoROSPublisher>>& GetPublishers() const { return Publishers; }
 
