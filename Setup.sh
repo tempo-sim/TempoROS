@@ -20,7 +20,11 @@ ADD_COMMAND_TO_HOOK() {
   HOOK_FILE="$GIT_DIR/hooks/$HOOK"
 
   if [ ! -f "$HOOK_FILE" ]; then
-    touch "$HOOK_FILE"
+    # A hook needs a shebang to run on its own. Prompting from it needs the
+    # terminal on stdin, but opening it must not fail the hook (and so the
+    # checkout) where there is no controlling terminal, e.g. CI.
+    echo -e "#!/usr/bin/env bash\n" > "$HOOK_FILE"
+    echo 'if { : < /dev/tty; } 2>/dev/null; then exec < /dev/tty; fi' >> "$HOOK_FILE"
     chmod +x "$HOOK_FILE"
   fi
 
