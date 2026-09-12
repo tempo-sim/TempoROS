@@ -7,18 +7,6 @@ UTempoROSNode* UTempoROSNodeBlueprintFunctionLibrary::CreateTempoROSNode(const F
 	return UTempoROSNode::Create(NodeName, Owner, bAutoTick);
 }
 
-UTempoROSNode* UTempoROSNode::Create(const FString& NodeName, UObject* Outer, bool bAutoTick)
-{
-	// Check before constructing the NodeOptions, which touches rclcpp and throws without a ROS context.
-	if (!FTempoROSModule::IsROSInitialized())
-	{
-		UE_LOG(LogTempoROS, Error, TEXT("Cannot create TempoROS node %s because ROS is not initialized. See earlier LogTempoROS errors."), *NodeName);
-		return nullptr;
-	}
-
-	return Create(NodeName, Outer, bAutoTick, rclcpp::NodeOptions(GetUnrealAllocator()));
-}
-
 UTempoROSNode* UTempoROSNode::Create(const FString& NodeName, UObject* Outer, bool bAutoTick, const rclcpp::NodeOptions& NodeOptions)
 {
 	if (!FTempoROSModule::IsROSInitialized())
@@ -70,7 +58,21 @@ void UTempoROSNode::Init(const FString& NodeName, const rclcpp::NodeOptions& Nod
 
 void UTempoROSNode::Tick(float DeltaTime) const
 {
-	rclcpp::spin_some(Node);
+	// The ROS context can be shut down underneath a live node (editor recompile, settings change).
+	// Spinning on an invalid context throws, and an escaping rclcpp exception takes down the process.
+	if (!FTempoROSModule::IsROSInitialized())
+	{
+		return;
+	}
+
+	try
+	{
+		rclcpp::spin_some(Node);
+	}
+	catch (const std::exception& Exception)
+	{
+		UE_LOG(LogTempoROS, Error, TEXT("Failed to spin node. Error: %s"), UTF8_TO_TCHAR(Exception.what()));
+	}
 }
 
 TSet<FString> UTempoROSNode::GetPublishedTopics() const

@@ -103,8 +103,9 @@ void FTempoROSModule::ShutdownModule()
 
 bool FTempoROSModule::IsROSInitialized()
 {
-	const FTempoROSModule* TempoROSModule = FModuleManager::GetModulePtr<FTempoROSModule>(TEXT("TempoROS"));
-	return TempoROSModule != nullptr && TempoROSModule->bROSInitialized;
+	// rclcpp::ok() reports whether the global default context is valid: false before rclcpp::init succeeds,
+	// after rclcpp::shutdown, and after rclcpp's own signal handler shuts the context down.
+	return rclcpp::ok();
 }
 
 void FTempoROSModule::InitROS()

@@ -13,9 +13,9 @@ public:
 	virtual void StartupModule() override;
 	virtual void ShutdownModule() override;
 
-	// Whether rclcpp initialized successfully. When false there is no valid ROS context, so no ROS
-	// object may be created. Callers must check this (or check the result of UTempoROSNode::Create)
-	// rather than relying on rclcpp to throw, since an escaping rclcpp exception takes down the process.
+	// Whether there is a valid ROS context. When false no ROS object may be created or spun. Callers
+	// must check this (or the result of UTempoROSNode::Create) rather than relying on rclcpp to throw,
+	// since an escaping rclcpp exception takes down the process.
 	static bool IsROSInitialized();
 
 private:

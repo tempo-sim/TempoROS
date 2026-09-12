@@ -27,11 +27,6 @@ bool UTempoROSClockServer::ShouldCreateSubsystem(UObject* Outer) const
 		return false;
 	}
 
-	if (!FTempoROSModule::IsROSInitialized())
-	{
-		return false;
-	}
-
 	const EWorldType::Type WorldType = Outer->GetWorld()->WorldType;
 	if (WorldType == EWorldType::Game || WorldType == EWorldType::PIE)
 	{
@@ -62,11 +57,6 @@ void UTempoROSClockServer::OnWorldBeginPlay(UWorld& InWorld)
 
 void UTempoROSClockServer::OnWorldPreActorTick(UWorld* World, ELevelTick TickType, float DeltaTime)
 {
-	if (!ROSNode)
-	{
-		return;
-	}
-
 	const EWorldType::Type WorldType = World->WorldType;
 	if (WorldType == EWorldType::Game || WorldType == EWorldType::PIE)
 	{
