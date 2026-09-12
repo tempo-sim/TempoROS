@@ -101,6 +101,13 @@ void FTempoROSModule::ShutdownModule()
 	ShutdownROS();
 }
 
+bool FTempoROSModule::IsROSInitialized()
+{
+	// rclcpp::ok() reports whether the global default context is valid: false before rclcpp::init succeeds,
+	// after rclcpp::shutdown, and after rclcpp's own signal handler shuts the context down.
+	return rclcpp::ok();
+}
+
 void FTempoROSModule::InitROS()
 {
 	if (bROSInitialized)

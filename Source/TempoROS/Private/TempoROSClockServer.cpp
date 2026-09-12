@@ -41,6 +41,11 @@ void UTempoROSClockServer::OnWorldBeginPlay(UWorld& InWorld)
 	Super::OnWorldBeginPlay(InWorld);
 
 	ROSNode = UTempoROSNode::Create("TempoROSClockServer", this);
+	if (!ROSNode)
+	{
+		return;
+	}
+
 	ROSNode->AddPublisher<double>("clock", FROSQOSProfile().Reliable().TransientLocal(), false);
 
 	// This will be called:

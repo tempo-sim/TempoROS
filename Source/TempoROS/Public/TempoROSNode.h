@@ -31,6 +31,8 @@ class TEMPOROS_API UTempoROSNode: public UObject, public IPublisherSupportInterf
 public:
 	UTempoROSNode() = default;
 
+	// Returns nullptr (with a LogTempoROS error) if ROS is not initialized or the node fails to initialize.
+	// Callers must check the result.
 	static UTempoROSNode* Create(const FString& NodeName,
 								 UObject* Outer=GetTransientPackage(),
 								 bool bAutoTick=true,
