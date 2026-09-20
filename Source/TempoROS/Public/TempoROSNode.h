@@ -225,6 +225,8 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void Tick(float DeltaTime) const;
 
+	virtual void BeginDestroy() override;
+
 protected:
 	/* IPublisherSupportInterface */
 	template <typename T>
@@ -240,6 +242,11 @@ protected:
 
 	std::shared_ptr<rclcpp::Node> Node = nullptr;
 	std::unique_ptr<image_transport::ImageTransport> ImageTransport;
+
+	// The world this node ticks with, if any, and the handle to its tick handler, so that both can be
+	// released when the node is destroyed rather than lingering in the world we were created with.
+	TWeakObjectPtr<UWorld> TickingWorld;
+	FDelegateHandle TickHandle;
 
 	TUniquePtr<FTempoStaticTFPublisher> StaticTFPublisher;
 	TUniquePtr<FTempoDynamicTFPublisher> DynamicTFPublisher;

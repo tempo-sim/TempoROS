@@ -4,14 +4,35 @@
 
 #include "CoreMinimal.h"
 #include "rclcpp/qos.hpp"
+#include "rmw/qos_policy_kind.h"
 
 #include "TempoROSTypes.generated.h"
 
+// Note that zero converts to RMW_DURATION_UNSPECIFIED, which every RMW implementation interprets as
+// "use my default" (which may or may not be infinite), *not* as a zero-length duration.
 static rmw_time_t ToRMWTime(float Value)
 {
 	const uint64_t Sec = Value;
 	const uint64_t NSec = 1e9 * (Value - Sec);
 	return rmw_time_t{Sec, NSec};
+}
+
+// The name of the QOS policy the middleware reported an incompatibility for, for logging.
+inline const TCHAR* QOSPolicyKindName(rmw_qos_policy_kind_t Kind)
+{
+	switch (Kind)
+	{
+	case RMW_QOS_POLICY_DURABILITY: return TEXT("durability");
+	case RMW_QOS_POLICY_DEADLINE: return TEXT("deadline");
+	case RMW_QOS_POLICY_LIVELINESS: return TEXT("liveliness");
+	case RMW_QOS_POLICY_RELIABILITY: return TEXT("reliability");
+	case RMW_QOS_POLICY_HISTORY: return TEXT("history");
+	case RMW_QOS_POLICY_LIFESPAN: return TEXT("lifespan");
+	case RMW_QOS_POLICY_DEPTH: return TEXT("depth");
+	case RMW_QOS_POLICY_LIVELINESS_LEASE_DURATION: return TEXT("liveliness lease duration");
+	case RMW_QOS_POLICY_AVOID_ROS_NAMESPACE_CONVENTIONS: return TEXT("avoid ROS namespace conventions");
+	default: return TEXT("unknown");
+	}
 }
 
 USTRUCT(BlueprintType)
@@ -72,22 +93,26 @@ struct FROSQOSProfile
 	bool bLimitedQueueSize = true;
 
 	// Number of samples that will be stored when not processed by the subscriber.
+	// Ten is the ROS 2 default depth. Note that a queue size of zero does not mean "store nothing": zero is
+	// RMW_QOS_POLICY_DEPTH_SYSTEM_DEFAULT, which leaves the depth at the middleware's default of one.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(EditCondition=bLimitedQueueSize, EditConditionHides=true))
-	int32 QueueSize = 0;
+	int32 QueueSize = 10;
 
 	// Best effort: attempt to deliver samples, but may lose them if the network is not robust.
 	// Reliable: guarantee that samples are delivered, may retry multiple times.
+	// Reliable is the ROS 2 default. Note that "system default" is *not* the ROS 2 default: it defers to
+	// the DDS default, which is best effort for subscriptions (and reliable for publishers).
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	EROSQOSReliability Reliability = EROSQOSReliability::SystemDefault;
+	EROSQOSReliability Reliability = EROSQOSReliability::Reliable;
 
 	// Transient local: the publisher becomes responsible for persisting samples for “late-joining” subscriptions.
 	// Volatile: no attempt is made to persist samples.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	EROSQOSDurability Durability = EROSQOSDurability::SystemDefault;
+	EROSQOSDurability Durability = EROSQOSDurability::Volatile;
 
 	// Should use a non-default deadline?
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	bool bCustomDeadline = true;
+	bool bCustomDeadline = false;
 
 	// The expected maximum amount of time between subsequent messages being published to a topic.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(EditCondition=bCustomDeadline, EditConditionHides=true))
@@ -95,7 +120,7 @@ struct FROSQOSProfile
 
 	// Should use a non-default lifespan?
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	bool bCustomLifespan = true;
+	bool bCustomLifespan = false;
 
 	// The maximum amount of time between the publishing and the reception of a message without the message being
 	// considered stale or expired (expired messages are silently dropped and are effectively never received).
@@ -147,6 +172,9 @@ struct FROSQOSProfile
 		return *this;
 	}
 
+	// A transient local *subscription* only receives the samples a publisher persisted before it joined if
+	// it is also reliable: that replay is delivered over the reliable (heartbeat/ack) path, so a best
+	// effort subscription is only ever sent samples published after it matched the publisher.
 	FROSQOSProfile& TransientLocal()
 	{
 		Durability = EROSQOSDurability::TransientLocal;
@@ -284,7 +312,7 @@ struct FROSQOSProfile
 
 		if (bCustomLeaseDuration)
 		{
-			ROSQOS = ROSQOS.lifespan(ToRMWTime(LeaseDuration));
+			ROSQOS = ROSQOS.liveliness_lease_duration(ToRMWTime(LeaseDuration));
 		}
 
 		return ROSQOS;

@@ -52,7 +52,7 @@ struct TImplicitFromROSConverter<FStampedTransform> : TFromROSConverter<geometry
 struct FTempoStaticTFPublisher
 {
 	FTempoStaticTFPublisher(const std::shared_ptr<rclcpp::Node>& Node)
-		: Broadcaster(Node, tf2_ros::StaticBroadcasterQoS(), TempoROSPublisherOptions()) {}
+		: Broadcaster(Node, tf2_ros::StaticBroadcasterQoS(), TempoROSPublisherOptions(TEXT("/tf_static"))) {}
 
 	void PublishTransform(const FStampedTransform& StampedTransform)
 	{
@@ -66,7 +66,7 @@ private:
 struct FTempoDynamicTFPublisher
 {
 	FTempoDynamicTFPublisher(const std::shared_ptr<rclcpp::Node>& Node)
-		: Broadcaster(Node, tf2_ros::DynamicBroadcasterQoS(), TempoROSPublisherOptions()) {}
+		: Broadcaster(Node, tf2_ros::DynamicBroadcasterQoS(), TempoROSPublisherOptions(TEXT("/tf"))) {}
 
 	void PublishTransform(const FStampedTransform& StampedTransform)
 	{
@@ -81,7 +81,7 @@ struct FTempoTFListener
 {
 	static rclcpp::SubscriptionOptions SubOptions()
 	{
-		rclcpp::SubscriptionOptions Options = TempoROSSubscriptionOptions();
+		rclcpp::SubscriptionOptions Options = TempoROSSubscriptionOptions(TEXT("/tf"));
 		Options.qos_overriding_options = rclcpp::QosOverridingOptions{
 			rclcpp::QosPolicyKind::Depth,
 			rclcpp::QosPolicyKind::Durability,
@@ -92,7 +92,7 @@ struct FTempoTFListener
 
 	static rclcpp::SubscriptionOptions StaticSubOptions()
 	{
-		rclcpp::SubscriptionOptions Options = TempoROSSubscriptionOptions();
+		rclcpp::SubscriptionOptions Options = TempoROSSubscriptionOptions(TEXT("/tf_static"));
 		Options.qos_overriding_options = rclcpp::QosOverridingOptions{
 			rclcpp::QosPolicyKind::Depth,
 			rclcpp::QosPolicyKind::History,
@@ -100,9 +100,12 @@ struct FTempoTFListener
 		return Options;
 	}
 
+	// StaticListenerQoS is transient local, which is what lets the listener receive the static transforms
+	// that were published before it joined. StaticSubOptions deliberately does not allow durability to be
+	// overridden for that reason.
 	FTempoTFListener(const std::shared_ptr<rclcpp::Node>& Node)
 		: Listener(Buffer, Node, false,
-			tf2_ros::DynamicListenerQoS(), tf2_ros::DynamicListenerQoS(),
+			tf2_ros::DynamicListenerQoS(), tf2_ros::StaticListenerQoS(),
 			SubOptions(), StaticSubOptions()) {}
 
 	bool GetTransform(const FString& FromFrame, const FString& ToFrame, const double Timestamp, FTransform& TransformOut) const
@@ -120,6 +123,7 @@ struct FTempoTFListener
 	}
 
 private:
-	tf2_ros::TransformListener Listener;
+	// Declaration order matters: Listener is constructed with (and destroyed before) a reference to Buffer.
 	tf2::BufferCore Buffer;
+	tf2_ros::TransformListener Listener;
 };
