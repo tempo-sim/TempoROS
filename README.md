@@ -5,6 +5,19 @@ This plugin was written by Tempo Simulation, LLC, and is free for anyone to use 
 
 `TempoROS`, unlike other Tempo plugins, is a standalone unit. **You can use `TempoROS` even if you are not using other `Tempo` plugins in your project.**
 
+> [!IMPORTANT]
+> **`TempoROS` is a standalone plugin, not part of `Tempo`.** Add it to your own project's
+> `Plugins` folder (see [Standalone Setup](#standalone-setup)) whether or not you use the other
+> `Tempo` plugins. Once it is there, Unreal enables it like any other project plugin — there is
+> nothing extra to switch on.
+>
+> If you **do** use the rest of `Tempo`, the plugin that bridges the two —
+> [`TempoROSBridge`](#temporosbridge) — ships with `Tempo` and **must be enabled explicitly**,
+> because `Tempo` does not assume you want ROS.
+>
+> Compatibility is guaranteed between `TempoROS` `main` and `Tempo` `main`, and is verified in
+> `Tempo`'s CI. Older release branches of one are not tested against the other.
+
 Have a question? Find us on [![Discord](https://img.shields.io/badge/Discord-Join%20Server-5865F2?logo=discord&logoColor=white)](https://discord.gg/bKa2hnGYnw)
 
 ## Compatibility
@@ -30,8 +43,8 @@ Have a question? Find us on [![Discord](https://img.shields.io/badge/Discord-Joi
 
 ## Quick Start
 ### Standalone Setup
-> [!Warning]
-> Skip this if you are using `TempoROS` as part of the rest of `Tempo`. `TempoROS` is a submodule of `Tempo`, and `Tempo`'s `Setup.sh` will call `TempoROS`'s `Setup.sh`.
+> [!Note]
+> These steps are the same whether or not you use the other `Tempo` plugins. `TempoROS` is **not** a submodule of `Tempo` — add it to your project alongside `Tempo`, not inside it.
 - Clone `TempoROS`. From your project's Plugins directory:
   - If you **are** using git to track your Unreal project: `git submodule add https://github.com/tempo-sim/TempoROS.git`
   - If you **are not** using git to track your Unreal project: `git clone https://github.com/tempo-sim/TempoROS.git`
@@ -45,7 +58,15 @@ If you run `Setup.sh` again it shouldn't do anything. However you can always for
 Of course, `TempoROS` can connect to your local ROS installation. For quick CLI debugging, it also comes with its own minimal ROS environment. You can run `source ./Scripts/ROSEnv.sh` to activate it. Then you can use `ros2 topic list`, `ros2 topic echo`, etc.
 
 ### TempoROSBridge
-If you enable `TempoROS` in a project where you **are** using the other Tempo plugins you should also enable [TempoROSBridge](https://github.com/tempo-sim/Tempo/tree/release/TempoROSBridge), `Tempo`'s plugin to adapt its existing API to ROS.
+If you use `TempoROS` in a project where you **are** also using the other Tempo plugins, enable [TempoROSBridge](https://github.com/tempo-sim/Tempo/tree/release/TempoROSBridge), `Tempo`'s plugin to adapt its existing API to ROS.
+
+Unlike `TempoROS`, `TempoROSBridge` is **opt-in**: its descriptor sets `"EnabledByDefault": false`, so you must add it to the `"Plugins"` array of your `.uproject` yourself.
+
+```json
+{ "Name": "TempoROSBridge", "Enabled": true }
+```
+
+Enabling it without `TempoROS` present in your project is a build error naming `TempoROS`, not a silent failure.
 
 ### Enable Exceptions
 You must enable exceptions for any module that depends on `TempoROS` or `rclcpp` by adding `bEnableExceptions = true;` to its `Build.cs` file.
@@ -228,16 +249,13 @@ However, raw image data can be heavy, so ROS also comes with an [image transport
 - Run the `roudi` server as a separate process on the same machine. `TempoROS` comes with a pre-build `roudi` (at `TempoROS/Source/ThirdParty/rclcpp/Binaries/Linux/iox-roudi`), but one from a pacakged ROS installation should also work. Note that you'll have to relax its compatibility check, with `iox-roudi -x minor`, as the one `TempoROS` linked against won't match a packaged ROS installation's exactly.
 
 ## Packaging
-You can use `TempoROS` as part of a packaged game. You can find a convenient script to package the project with the recommended settings in [Tempo](https://github.com/tempo-sim/Tempo/blob/release/Scripts/Package.sh).
+You can use `TempoROS` as part of a packaged game.
 
 To package an Unreal project with `TempoROS`, you must specify its custom stage copy handler by adding `CustomStageCopyHandler=TempoROSCopyHandler` to your `Config/DefaultGame.ini`. This allows the package process to correctly copy symbolic links in the `rclcpp` libraries on all platforms.
 
-If you are building using the `Package.sh` script from Tempo, this custom copy handler will be built automatically. Otherwise, you must build it yourself before
-packaging, by running the following script in `TempoROS`:
-```
-Scripts/BuildAutomation.sh
-```
-The NuGet vulnerability database has a warning for the version of Magick that Unreal 5.6 and 5.7 are set to use. You can work around this by adding these contents a file, `<Unreal Engine Path>/Engine/Source/Programs/AutomationTool/Directory.Build.props` before running `BuildAutomation.sh`:
+That is the only step. The handler is `Build/TempoROS.Automation.csproj`, and `AutomationTool` finds and builds it by itself: Unreal's rules scan looks in the `Build` folder of any plugin for automation projects. You do not need to pre-build it, pass `-ScriptDir`, or set any environment variable. It works whether you package with `RunUAT BuildCookRun` directly, from the editor's **Package Project** menu, or with the [convenient script in Tempo](https://github.com/tempo-sim/Tempo/blob/release/Scripts/Package.sh).
+
+The NuGet vulnerability database has a warning for the version of Magick that Unreal 5.6 and 5.7 are set to use. If packaging fails on that, work around it by creating a file, `<Unreal Engine Path>/Engine/Source/Programs/AutomationTool/Directory.Build.props`, with these contents:
 ```
 <Project>
   <PropertyGroup>
@@ -250,5 +268,4 @@ The NuGet vulnerability database has a warning for the version of Magick that Un
 If you are using the other Tempo plugins, this will be done automatically as part of their engine mods step.
 
 ## Known Issues
-- To run an Unreal packaged game with TempoROS on Windows, you must add the directory `<package_root>/<YourProjectName>/Plugins/Tempo/TempoROS/Source/ThirdParty/rclcpp/Binaries/Windows` to your `PATH` environment variable.
 - Sometimes the `GenROSIDL` prebuild steps fails with `TypeError: '>' not supported between instances of 'str' and 'int'` from `em.py`. Still debugging this, but for whatever reason it seems more likely to happen when using ssh.

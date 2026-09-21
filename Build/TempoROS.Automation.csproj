@@ -1,5 +1,23 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="$(UNREAL_ENGINE_PATH)\Engine\Source\Programs\Shared\UnrealEngine.csproj.props" />
+  <!--
+    Locate the engine without help from the environment.
+
+    AutomationTool discovers this project automatically because it sits in the plugin's Build
+    folder (UnrealBuildTool's rules scan recurses into Source/ and Build/ of any directory holding
+    a .uplugin), and when it builds a script module it passes EngineDir and EnginePath as MSBuild
+    global properties - see EpicGames.MsBuild/CsProjBuilder.cs. Both are the Engine directory
+    itself, not its parent.
+
+    UNREAL_ENGINE_PATH stays as a fallback so a manual `dotnet build
+    -p:UNREAL_ENGINE_PATH=<engine root>` still works; note that one *is* the parent of Engine.
+  -->
+  <PropertyGroup>
+    <TempoEngineDir Condition="'$(EngineDir)' != ''">$(EngineDir)</TempoEngineDir>
+    <TempoEngineDir Condition="'$(TempoEngineDir)' == '' And '$(EnginePath)' != ''">$(EnginePath)</TempoEngineDir>
+    <TempoEngineDir Condition="'$(TempoEngineDir)' == ''">$(UNREAL_ENGINE_PATH)\Engine</TempoEngineDir>
+  </PropertyGroup>
+
+  <Import Project="$(TempoEngineDir)\Source\Programs\Shared\UnrealEngine.csproj.props" />
 
   <PropertyGroup Condition="'$(MSBuildRuntimeType)' == 'Core' And '$(BundledNETCoreAppTargetFrameworkVersion)' >= '10.0'">
     <TargetFramework>net10.0</TargetFramework>
@@ -20,7 +38,7 @@
     <RootNamespace>Tempo.Automation</RootNamespace>
     <AssemblyName>Tempo.Automation</AssemblyName>
     <WarningsNotAsErrors>612,618</WarningsNotAsErrors>
-    <OutputPath>$(UNREAL_ENGINE_PATH)\Engine\Binaries\DotNET\AutomationTool\AutomationScripts\Tempo</OutputPath>
+    <OutputPath>$(TempoEngineDir)\Binaries\DotNET\AutomationTool\AutomationScripts\Tempo</OutputPath>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <DebugType>pdbonly</DebugType>
   </PropertyGroup>
@@ -38,10 +56,10 @@
     <DebugType>full</DebugType>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="$(UNREAL_ENGINE_PATH)\Engine\Source\Programs\Shared\EpicGames.Core\EpicGames.Core.csproj" PrivateAssets="All"><Private>false</Private></ProjectReference>
-    <ProjectReference Include="$(UNREAL_ENGINE_PATH)\Engine\Source\Programs\UnrealBuildTool\UnrealBuildTool.csproj" PrivateAssets="All"><Private>false</Private></ProjectReference>
-    <ProjectReference Include="$(UNREAL_ENGINE_PATH)\Engine\Source\Programs\AutomationTool\AutomationUtils\AutomationUtils.Automation.csproj" PrivateAssets="All"><Private>false</Private></ProjectReference>
-    <ProjectReference Include="$(UNREAL_ENGINE_PATH)\Engine\Source\Programs\AutomationTool\Scripts\AutomationScripts.Automation.csproj" PrivateAssets="All"><Private>false</Private></ProjectReference>
+    <ProjectReference Include="$(TempoEngineDir)\Source\Programs\Shared\EpicGames.Core\EpicGames.Core.csproj" PrivateAssets="All"><Private>false</Private></ProjectReference>
+    <ProjectReference Include="$(TempoEngineDir)\Source\Programs\UnrealBuildTool\UnrealBuildTool.csproj" PrivateAssets="All"><Private>false</Private></ProjectReference>
+    <ProjectReference Include="$(TempoEngineDir)\Source\Programs\AutomationTool\AutomationUtils\AutomationUtils.Automation.csproj" PrivateAssets="All"><Private>false</Private></ProjectReference>
+    <ProjectReference Include="$(TempoEngineDir)\Source\Programs\AutomationTool\Scripts\AutomationScripts.Automation.csproj" PrivateAssets="All"><Private>false</Private></ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="System.Data.DataSetExtensions" Version="4.5.0" />
