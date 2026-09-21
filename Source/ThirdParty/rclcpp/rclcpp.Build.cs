@@ -76,9 +76,26 @@ public class rclcpp : ModuleRules
             PublicRuntimeLibraryPaths.Add(Path.Combine(ModuleDirectory, "Binaries", "Windows"));
         }
 
+        // In a monolithic build (i.e. a packaged game) TempoROS is linked into the game executable itself, so the
+        // Windows loader binds rclcpp's imports before any of our code - TempoROSBootstrap included - gets to run.
+        // No module startup hook can ever be early enough. The executable's own directory is the one place the
+        // loader searches unaided, so stage the dlls there. Every later load by name (the rmw implementation,
+        // typesupport, and image_transport's pluginlib plugins) resolves from that same directory too.
+        // The share directory is deliberately left where it is, since AMENT_PREFIX_PATH points at its parent.
+        bool bStageDllsNextToExecutable = Target.Platform == UnrealTargetPlatform.Win64 &&
+                                          Target.LinkType == TargetLinkType.Monolithic;
+
         foreach (string libraryPath in moduleDepPaths.RuntimeLibraryPaths)
         {
-            RuntimeDependencies.Add(libraryPath);
+            if (bStageDllsNextToExecutable && libraryPath.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
+            {
+                RuntimeDependencies.Add(Path.Combine("$(TargetOutputDir)", Path.GetFileName(libraryPath)),
+                    libraryPath, StagedFileType.NonUFS);
+            }
+            else
+            {
+                RuntimeDependencies.Add(libraryPath);
+            }
         }
 
         PrivateDependencyModuleNames.AddRange(
