@@ -2,8 +2,10 @@
 
 #pragma once
 
+#include "TempoROS.h"
 #include "TempoROSAllocator.h"
 #include "TempoROSConversion.h"
+#include "TempoROSTypes.h"
 
 #include "rclcpp.h"
 
@@ -15,13 +17,21 @@ namespace std::pmr
 }
 #endif
 
-inline rclcpp::SubscriptionOptions TempoROSSubscriptionOptions()
+inline rclcpp::SubscriptionOptions TempoROSSubscriptionOptions(const FString& Topic)
 {
 	// rclcpp::SubscriptionOptions defaults its allocator type to std::pmr::polymorphic_allocator<void>,
 	// which picks up the default memory resource set in SetUnrealDefaultMemoryResource() at startup. The
 	// default message memory strategy likewise default-constructs its allocator from that resource.
 	rclcpp::SubscriptionOptions SubscriptionOptions;
+	// rclcpp's own default callbacks log through rcutils, which does not reach the Unreal log. Supply our
+	// own instead: a QOS mismatch does not fail subscription creation, so without this the subscription
+	// simply never receives anything, with nothing to explain why.
 	SubscriptionOptions.use_default_callbacks = false;
+	SubscriptionOptions.event_callbacks.incompatible_qos_callback = [Topic](rclcpp::QOSRequestedIncompatibleQoSInfo& Info)
+	{
+		UE_LOG(LogTempoROS, Warning, TEXT("Discovered a publisher on topic %s whose QOS is incompatible with our subscription's (policy: %s). No messages will be received from it."),
+			*Topic, QOSPolicyKindName(Info.last_policy_kind));
+	};
 	return SubscriptionOptions;
 }
 
@@ -47,7 +57,7 @@ struct TTempoROSSubscription : FTempoROSSubscription
 			{
 			  Callback.ExecuteIfBound(TImplicitFromROSConverter<MessageType>::Convert(Message));
 			},
-			TempoROSSubscriptionOptions()
+			TempoROSSubscriptionOptions(Topic)
 		);
 	}
 

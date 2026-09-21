@@ -52,15 +52,47 @@ void UTempoROSNode::Init(const FString& NodeName, const rclcpp::NodeOptions& Nod
 	{
 		// ROS has nothing to do with movie scene sequences, but this event fires in exactly the right conditions:
 		// After world time has been updated for the current frame, before Actor ticks have begun, and even when paused.
-		TickWithWorld->AddMovieSceneSequenceTickHandler(FOnMovieSceneSequenceTick::FDelegate::CreateUObject(this, &UTempoROSNode::Tick));
+		TickingWorld = TickWithWorld;
+		TickHandle = TickWithWorld->AddMovieSceneSequenceTickHandler(FOnMovieSceneSequenceTick::FDelegate::CreateUObject(this, &UTempoROSNode::Tick));
 	}
+}
+
+void UTempoROSNode::BeginDestroy()
+{
+	if (UWorld* World = TickingWorld.Get())
+	{
+		World->RemoveMovieSceneSequenceTickHandler(TickHandle);
+	}
+	TickingWorld.Reset();
+	TickHandle.Reset();
+
+	// Release the ROS entities here rather than in the destructor. A node whose owner is gone (for example
+	// after a level reload rebuilds the subsystem that created it) otherwise stays in the ROS graph, holding
+	// its publishers and subscriptions, until the UObject is actually destroyed.
+	try
+	{
+		Subscriptions.Empty();
+		Publishers.Empty();
+		Services.Empty();
+		TFListener.Reset();
+		StaticTFPublisher.Reset();
+		DynamicTFPublisher.Reset();
+		ImageTransport.reset();
+		Node.reset();
+	}
+	catch (const std::exception& Exception)
+	{
+		UE_LOG(LogTempoROS, Error, TEXT("Failed to destroy node. Error: %s"), UTF8_TO_TCHAR(Exception.what()));
+	}
+
+	Super::BeginDestroy();
 }
 
 void UTempoROSNode::Tick(float DeltaTime) const
 {
 	// The ROS context can be shut down underneath a live node (editor recompile, settings change).
 	// Spinning on an invalid context throws, and an escaping rclcpp exception takes down the process.
-	if (!FTempoROSModule::IsROSInitialized())
+	if (!Node || !FTempoROSModule::IsROSInitialized())
 	{
 		return;
 	}

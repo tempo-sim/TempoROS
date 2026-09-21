@@ -4,6 +4,7 @@
 
 #include "TempoROSConversion.h"
 
+#include "TempoROS.h"
 #include "TempoROSAllocator.h"
 #include "TempoROSTypes.h"
 
@@ -19,12 +20,18 @@ namespace std::pmr
 }
 #endif
 
-inline rclcpp::PublisherOptions TempoROSPublisherOptions()
+inline rclcpp::PublisherOptions TempoROSPublisherOptions(const FString& Topic)
 {
 	// rclcpp::PublisherOptions defaults its allocator type to std::pmr::polymorphic_allocator<void>,
 	// which picks up the default memory resource set in SetUnrealDefaultMemoryResource() at startup.
 	rclcpp::PublisherOptions PublisherOptions;
+	// See TempoROSSubscriptionOptions: rclcpp's default callbacks do not reach the Unreal log.
 	PublisherOptions.use_default_callbacks = false;
+	PublisherOptions.event_callbacks.incompatible_qos_callback = [Topic](rclcpp::QOSOfferedIncompatibleQoSInfo& Info)
+	{
+		UE_LOG(LogTempoROS, Warning, TEXT("Discovered a subscription on topic %s whose QOS is incompatible with our publisher's (policy: %s). It will not receive any messages."),
+			*Topic, QOSPolicyKindName(Info.last_policy_kind));
+	};
 	return PublisherOptions;
 }
 
@@ -58,10 +65,11 @@ struct TTempoROSPublisher : FTempoROSPublisher
 	TTempoROSPublisher(const IPublisherSupportInterface* PublisherSupport, const FString& Topic, const FROSQOSProfile& QOSProfile, bool bPrependNodeName)
 		: Node(PublisherSupport->GetNode())
 	{
+		const FString ResolvedTopic = bPrependNodeName ? PrependNodeName(Node, Topic) : Topic;
 		Publisher = Node->create_publisher<ROSMessageType>(
-			bPrependNodeName ? TCHAR_TO_UTF8(*PrependNodeName(Node, Topic)) : TCHAR_TO_UTF8(*Topic),
+			TCHAR_TO_UTF8(*ResolvedTopic),
 			QOSProfile.ToROS(),
-			TempoROSPublisherOptions()
+			TempoROSPublisherOptions(ResolvedTopic)
 		);
 		bUseSharedMemory = QOSProfile.bUseSharedMemory;
 #if !PLATFORM_LINUX
@@ -110,7 +118,7 @@ struct TTempoROSPublisher<MessageType> : FTempoROSPublisher
 			bPrependNodeName ? TCHAR_TO_UTF8(*PrependNodeName(Node, Topic)) : TCHAR_TO_UTF8(*Topic),
 			QOSProfile.QueueSize,
 			QOSProfile.Durability == EROSQOSDurability::TransientLocal,
-			TempoROSPublisherOptions())) {}
+			TempoROSPublisherOptions(bPrependNodeName ? PrependNodeName(Node, Topic) : Topic))) {}
 
 	void Publish(const MessageType& Message) const
 	{
