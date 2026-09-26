@@ -27,11 +27,14 @@ inline rclcpp::PublisherOptions TempoROSPublisherOptions(const FString& Topic)
 	rclcpp::PublisherOptions PublisherOptions;
 	// See TempoROSSubscriptionOptions: rclcpp's default callbacks do not reach the Unreal log.
 	PublisherOptions.use_default_callbacks = false;
+	// See TempoROSSubscriptionOptions for why this is not registered on Windows.
+#if !PLATFORM_WINDOWS
 	PublisherOptions.event_callbacks.incompatible_qos_callback = [Topic](rclcpp::QOSOfferedIncompatibleQoSInfo& Info)
 	{
 		UE_LOG(LogTempoROS, Warning, TEXT("Discovered a subscription on topic %s whose QOS is incompatible with our publisher's (policy: %s). It will not receive any messages."),
 			*Topic, QOSPolicyKindName(Info.last_policy_kind));
 	};
+#endif
 	return PublisherOptions;
 }
 
