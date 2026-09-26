@@ -20,18 +20,13 @@ namespace std::pmr
 }
 #endif
 
-inline rclcpp::PublisherOptions TempoROSPublisherOptions(const FString& Topic)
+inline rclcpp::PublisherOptions TempoROSPublisherOptions()
 {
 	// rclcpp::PublisherOptions defaults its allocator type to std::pmr::polymorphic_allocator<void>,
 	// which picks up the default memory resource set in SetUnrealDefaultMemoryResource() at startup.
 	rclcpp::PublisherOptions PublisherOptions;
-	// See TempoROSSubscriptionOptions: rclcpp's default callbacks do not reach the Unreal log.
+	// See TempoROSSubscriptionOptions.
 	PublisherOptions.use_default_callbacks = false;
-	PublisherOptions.event_callbacks.incompatible_qos_callback = [Topic](rclcpp::QOSOfferedIncompatibleQoSInfo& Info)
-	{
-		UE_LOG(LogTempoROS, Warning, TEXT("Discovered a subscription on topic %s whose QOS is incompatible with our publisher's (policy: %s). It will not receive any messages."),
-			*Topic, QOSPolicyKindName(Info.last_policy_kind));
-	};
 	return PublisherOptions;
 }
 
@@ -69,7 +64,7 @@ struct TTempoROSPublisher : FTempoROSPublisher
 		Publisher = Node->create_publisher<ROSMessageType>(
 			TCHAR_TO_UTF8(*ResolvedTopic),
 			QOSProfile.ToROS(),
-			TempoROSPublisherOptions(ResolvedTopic)
+			TempoROSPublisherOptions()
 		);
 		bUseSharedMemory = QOSProfile.bUseSharedMemory;
 #if !PLATFORM_LINUX
@@ -118,7 +113,7 @@ struct TTempoROSPublisher<MessageType> : FTempoROSPublisher
 			bPrependNodeName ? TCHAR_TO_UTF8(*PrependNodeName(Node, Topic)) : TCHAR_TO_UTF8(*Topic),
 			QOSProfile.QueueSize,
 			QOSProfile.Durability == EROSQOSDurability::TransientLocal,
-			TempoROSPublisherOptions(bPrependNodeName ? PrependNodeName(Node, Topic) : Topic))) {}
+			TempoROSPublisherOptions())) {}
 
 	void Publish(const MessageType& Message) const
 	{

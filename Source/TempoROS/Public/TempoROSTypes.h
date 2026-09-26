@@ -4,7 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "rclcpp/qos.hpp"
-#include "rmw/qos_policy_kind.h"
 
 #include "TempoROSTypes.generated.h"
 
@@ -15,24 +14,6 @@ static rmw_time_t ToRMWTime(float Value)
 	const uint64_t Sec = Value;
 	const uint64_t NSec = 1e9 * (Value - Sec);
 	return rmw_time_t{Sec, NSec};
-}
-
-// The name of the QOS policy the middleware reported an incompatibility for, for logging.
-inline const TCHAR* QOSPolicyKindName(rmw_qos_policy_kind_t Kind)
-{
-	switch (Kind)
-	{
-	case RMW_QOS_POLICY_DURABILITY: return TEXT("durability");
-	case RMW_QOS_POLICY_DEADLINE: return TEXT("deadline");
-	case RMW_QOS_POLICY_LIVELINESS: return TEXT("liveliness");
-	case RMW_QOS_POLICY_RELIABILITY: return TEXT("reliability");
-	case RMW_QOS_POLICY_HISTORY: return TEXT("history");
-	case RMW_QOS_POLICY_LIFESPAN: return TEXT("lifespan");
-	case RMW_QOS_POLICY_DEPTH: return TEXT("depth");
-	case RMW_QOS_POLICY_LIVELINESS_LEASE_DURATION: return TEXT("liveliness lease duration");
-	case RMW_QOS_POLICY_AVOID_ROS_NAMESPACE_CONVENTIONS: return TEXT("avoid ROS namespace conventions");
-	default: return TEXT("unknown");
-	}
 }
 
 USTRUCT(BlueprintType)
