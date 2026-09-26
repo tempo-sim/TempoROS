@@ -17,28 +17,18 @@ namespace std::pmr
 }
 #endif
 
-inline rclcpp::SubscriptionOptions TempoROSSubscriptionOptions(const FString& Topic)
+inline rclcpp::SubscriptionOptions TempoROSSubscriptionOptions()
 {
 	// rclcpp::SubscriptionOptions defaults its allocator type to std::pmr::polymorphic_allocator<void>,
 	// which picks up the default memory resource set in SetUnrealDefaultMemoryResource() at startup. The
 	// default message memory strategy likewise default-constructs its allocator from that resource.
 	rclcpp::SubscriptionOptions SubscriptionOptions;
-	// rclcpp's own default callbacks log through rcutils, which does not reach the Unreal log. Supply our
-	// own instead: a QOS mismatch does not fail subscription creation, so without this the subscription
-	// simply never receives anything, with nothing to explain why.
+	// Do not register any QOS event callbacks (and do not let rclcpp register its defaults). Doing so
+	// makes rclcpp's header code, compiled into the calling Unreal module and so allocating with that
+	// module's operator new (FMemory), insert into maps that ~SubscriptionBase() / ~PublisherBase() free
+	// inside the prebuilt rclcpp library, which corrupts the heap when the entity is destroyed
+	// (https://github.com/tempo-sim/TempoROS/issues/82).
 	SubscriptionOptions.use_default_callbacks = false;
-	// Not on Windows, though: registering any event callback makes rclcpp's header code insert into a map
-	// that ~SubscriptionBase() / ~PublisherBase() then frees inside the prebuilt rclcpp DLL. Each Unreal
-	// module has its own operator new/delete (FMemory) on Windows while that DLL uses the CRT heap, so
-	// destroying the entity corrupts the heap (https://github.com/tempo-sim/TempoROS/issues/82). Restore
-	// this once the rclcpp dependency allocates those maps through std::pmr.
-#if !PLATFORM_WINDOWS
-	SubscriptionOptions.event_callbacks.incompatible_qos_callback = [Topic](rclcpp::QOSRequestedIncompatibleQoSInfo& Info)
-	{
-		UE_LOG(LogTempoROS, Warning, TEXT("Discovered a publisher on topic %s whose QOS is incompatible with our subscription's (policy: %s). No messages will be received from it."),
-			*Topic, QOSPolicyKindName(Info.last_policy_kind));
-	};
-#endif
 	return SubscriptionOptions;
 }
 
@@ -64,7 +54,7 @@ struct TTempoROSSubscription : FTempoROSSubscription
 			{
 			  Callback.ExecuteIfBound(TImplicitFromROSConverter<MessageType>::Convert(Message));
 			},
-			TempoROSSubscriptionOptions(Topic)
+			TempoROSSubscriptionOptions()
 		);
 	}
 

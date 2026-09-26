@@ -52,7 +52,7 @@ struct TImplicitFromROSConverter<FStampedTransform> : TFromROSConverter<geometry
 struct FTempoStaticTFPublisher
 {
 	FTempoStaticTFPublisher(const std::shared_ptr<rclcpp::Node>& Node)
-		: Broadcaster(Node, tf2_ros::StaticBroadcasterQoS(), TempoROSPublisherOptions(TEXT("/tf_static"))) {}
+		: Broadcaster(Node, tf2_ros::StaticBroadcasterQoS(), TempoROSPublisherOptions()) {}
 
 	void PublishTransform(const FStampedTransform& StampedTransform)
 	{
@@ -66,7 +66,7 @@ private:
 struct FTempoDynamicTFPublisher
 {
 	FTempoDynamicTFPublisher(const std::shared_ptr<rclcpp::Node>& Node)
-		: Broadcaster(Node, tf2_ros::DynamicBroadcasterQoS(), TempoROSPublisherOptions(TEXT("/tf"))) {}
+		: Broadcaster(Node, tf2_ros::DynamicBroadcasterQoS(), TempoROSPublisherOptions()) {}
 
 	void PublishTransform(const FStampedTransform& StampedTransform)
 	{
@@ -81,7 +81,7 @@ struct FTempoTFListener
 {
 	static rclcpp::SubscriptionOptions SubOptions()
 	{
-		rclcpp::SubscriptionOptions Options = TempoROSSubscriptionOptions(TEXT("/tf"));
+		rclcpp::SubscriptionOptions Options = TempoROSSubscriptionOptions();
 		Options.qos_overriding_options = rclcpp::QosOverridingOptions{
 			rclcpp::QosPolicyKind::Depth,
 			rclcpp::QosPolicyKind::Durability,
@@ -92,7 +92,7 @@ struct FTempoTFListener
 
 	static rclcpp::SubscriptionOptions StaticSubOptions()
 	{
-		rclcpp::SubscriptionOptions Options = TempoROSSubscriptionOptions(TEXT("/tf_static"));
+		rclcpp::SubscriptionOptions Options = TempoROSSubscriptionOptions();
 		Options.qos_overriding_options = rclcpp::QosOverridingOptions{
 			rclcpp::QosPolicyKind::Depth,
 			rclcpp::QosPolicyKind::History,
