@@ -5,6 +5,19 @@ This plugin was written by Tempo Simulation, LLC, and is free for anyone to use 
 
 `TempoROS`, unlike other Tempo plugins, is a standalone unit. **You can use `TempoROS` even if you are not using other `Tempo` plugins in your project.**
 
+> [!IMPORTANT]
+> **`TempoROS` is opt-in — it must be explicitly enabled.** Unreal enables most plugins in a
+> project's `Plugins` folder automatically, but `TempoROS.uplugin` sets
+> `"EnabledByDefault": false`. A project that does not ask for ROS never builds `TempoROS`, never
+> packages it, and never downloads `rclcpp`.
+>
+> Running `Setup.sh` (see [Standalone Setup](#standalone-setup)) enables it for you. To do it by
+> hand instead, add this to the `"Plugins"` array of your `.uproject`:
+>
+> ```json
+> { "Name": "TempoROS", "Enabled": true }
+> ```
+
 Have a question? Find us on [![Discord](https://img.shields.io/badge/Discord-Join%20Server-5865F2?logo=discord&logoColor=white)](https://discord.gg/bKa2hnGYnw)
 
 ## Compatibility
@@ -31,11 +44,12 @@ Have a question? Find us on [![Discord](https://img.shields.io/badge/Discord-Joi
 ## Quick Start
 ### Standalone Setup
 > [!Warning]
-> Skip this if you are using `TempoROS` as part of the rest of `Tempo`. `TempoROS` is a submodule of `Tempo`, and `Tempo`'s `Setup.sh` will call `TempoROS`'s `Setup.sh`.
+> Skip the clone step if you are using `TempoROS` as part of the rest of `Tempo` — it is already a submodule of `Tempo`. You do still need to run `TempoROS`'s `Setup.sh` once, because that is what opts your project into ROS. `Tempo`'s `Setup.sh` calls it only once `TempoROS` is enabled, so that a `Tempo` project that does not use ROS never downloads `rclcpp`.
 - Clone `TempoROS`. From your project's Plugins directory:
   - If you **are** using git to track your Unreal project: `git submodule add https://github.com/tempo-sim/TempoROS.git`
   - If you **are not** using git to track your Unreal project: `git clone https://github.com/tempo-sim/TempoROS.git`
 - Run the `Setup.sh` script (from the `TempoROS` root) once. This script will:
+  - Enable the `TempoROS` plugin in your project's `.uproject`
   - Install third party dependencies (`rclcpp` and its dependencies)
   - Add git hooks to update dependencies automatically
 

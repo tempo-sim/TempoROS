@@ -55,14 +55,20 @@ FIND_UPROJECT() {
     return 1
 }
 
-UPROJECT_FILE=$(FIND_UPROJECT "$TEMPOROS_ROOT")
+UPROJECT_FILE=$(FIND_UPROJECT "$TEMPOROS_ROOT" 2>/dev/null) || UPROJECT_FILE=""
 
-TEMPOROS_ENABLED=$(jq '.Plugins[] | select(.Name=="TempoROS") | .Enabled' "$UPROJECT_FILE")
-# Remove any trailing carriage return character
-TEMPOROS_ENABLED="${TEMPOROS_ENABLED%$'\r'}"
-if [ "$TEMPOROS_ENABLED" = "false" ]; then
-  echo -e "Skipping check of TempoROS ThirdParty dependencies because TempoROS plugin is disabled in $(basename "$UPROJECT_FILE")"
-  exit 0
+# Nothing below is worth doing unless Unreal will actually build TempoROS for this project --
+# rclcpp is a large download. TempoROS is opt-in ("EnabledByDefault": false), so "not mentioned
+# in the .uproject" means disabled, not enabled. "-force" is an explicit do-it-anyway, for CI and
+# for a checkout with no .uproject to consult.
+if [ "$1" != "-force" ]; then
+  TEMPOROS_ENABLED=0
+  "$SCRIPT_DIR/IsPluginEnabled.sh" TempoROS || TEMPOROS_ENABLED=$?
+  if [ "$TEMPOROS_ENABLED" -eq 1 ]; then
+    echo "Skipping check of TempoROS ThirdParty dependencies because the TempoROS plugin is not enabled in $(basename "$UPROJECT_FILE")."
+    echo "To enable it, run TempoROS's Setup.sh."
+    exit 0
+  fi
 fi
 
 if [[ "$OSTYPE" = "msys" ]]; then
