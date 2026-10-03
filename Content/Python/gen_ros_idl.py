@@ -561,11 +561,19 @@ class ROSIDLGenerator:
             filename_no_ext = self.snake_to_pascal(filename_no_ext)
             original_filename = f"{filename_no_ext}.{extension}"
 
-            # De-duplicate cpp file names by type support
-            if "introspection_cpp" in relative_str and "__type_support.cpp" in filename:
-                relative_str = relative_str.replace("__type_support.cpp", "__introspection_cpp_type_support.cpp")
-            if "fastrtps_cpp" in relative_str and "__type_support.cpp" in filename:
-                relative_str = relative_str.replace("__type_support.cpp", "__fastrtps_cpp_type_support.cpp")
+            # De-duplicate cpp file names by type support. The plain cpp type support is renamed
+            # too, even though nothing else claims its name: UBT's IWYU check matches each .cpp to
+            # a same-named .h anywhere in the module (directories are ignored) and requires that
+            # header be the first include, so "<name>__type_support.cpp" is blamed for not
+            # including the C generator's "detail/<name>__type_support.h". The C generator is new
+            # here as of Jazzy, hence this is too.
+            if "__type_support.cpp" in filename:
+                if "introspection_cpp" in relative_str:
+                    relative_str = relative_str.replace("__type_support.cpp", "__introspection_cpp_type_support.cpp")
+                elif "fastrtps_cpp" in relative_str:
+                    relative_str = relative_str.replace("__type_support.cpp", "__fastrtps_cpp_type_support.cpp")
+                else:
+                    relative_str = relative_str.replace("__type_support.cpp", "__cpp_type_support.cpp")
 
             # Remove c/, cpp/, introspection_cpp/, fastrtps_cpp/ from path (can be at start or
             # middle). Handle paths starting with these prefixes.
