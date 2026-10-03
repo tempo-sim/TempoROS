@@ -11,7 +11,6 @@
 #include "rclcpp.h"
 
 #include "TempoROSSettings.h"
-#include "image_transport/image_transport.hpp"
 
 #include "TempoROSNode.generated.h"
 
@@ -232,7 +231,6 @@ protected:
 	template <typename T>
 	friend struct TTempoROSPublisher;
 	virtual const std::shared_ptr<rclcpp::Node>& GetNode() const override { return Node; }
-	virtual const std::unique_ptr<image_transport::ImageTransport>& GetImageTransport() const override { return ImageTransport; }
 
 	void Init(const FString& NodeName, const rclcpp::NodeOptions& NodeOptions, UWorld* TickWithWorld);
 
@@ -241,7 +239,6 @@ protected:
 	TMap<FString, TUniquePtr<FTempoROSService>> Services;
 
 	std::shared_ptr<rclcpp::Node> Node = nullptr;
-	std::unique_ptr<image_transport::ImageTransport> ImageTransport;
 
 	// The world this node ticks with, if any, and the handle to its tick handler, so that both can be
 	// released when the node is destroyed rather than lingering in the world we were created with.

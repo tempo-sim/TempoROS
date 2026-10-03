@@ -43,7 +43,6 @@ UTempoROSNode* UTempoROSNode::Create(const FString& NodeName, UObject* Outer, bo
 void UTempoROSNode::Init(const FString& NodeName, const rclcpp::NodeOptions& NodeOptions, UWorld* TickWithWorld)
 {
 	Node = std::make_shared<rclcpp::Node>(TCHAR_TO_UTF8(*NodeName), NodeOptions);
-	ImageTransport = std::make_unique<image_transport::ImageTransport>(Node);
 	StaticTFPublisher = MakeUnique<FTempoStaticTFPublisher>(Node);
 	DynamicTFPublisher = MakeUnique<FTempoDynamicTFPublisher>(Node);
 	TFListener = MakeUnique<FTempoTFListener>(Node);
@@ -77,7 +76,6 @@ void UTempoROSNode::BeginDestroy()
 		TFListener.Reset();
 		StaticTFPublisher.Reset();
 		DynamicTFPublisher.Reset();
-		ImageTransport.reset();
 		Node.reset();
 	}
 	catch (const std::exception& Exception)
