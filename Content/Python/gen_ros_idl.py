@@ -94,10 +94,13 @@ class ROSIDLGenerator:
         else:
             os.environ["PYTHONPATH"] = site_packages
 
+        os.environ["AMENT_PREFIX_PATH"] = str(self.get_ament_prefix())
+
+    def get_ament_prefix(self) -> Path:
+        """Get the ament prefix (the install root) inside the rclcpp dependency."""
         if platform.system() == "Windows":
-            os.environ["AMENT_PREFIX_PATH"] = str(self.rclcpp_dir / "Binaries" / self.platform_folder)
-        else:
-            os.environ["AMENT_PREFIX_PATH"] = str(self.rclcpp_dir / "Libraries" / self.platform_folder)
+            return self.rclcpp_dir / "Binaries" / self.platform_folder
+        return self.rclcpp_dir / "Libraries" / self.platform_folder
 
     def get_gentool(self) -> str:
         """Get the path to the rosidl tool"""
@@ -475,6 +478,12 @@ class ROSIDLGenerator:
                 str(self.python_executable),
                 gentool,
                 "generate",
+                # Jazzy's C++ type supports include the C generator's "<name>__functions.h" for the
+                # three type-description entry points it now puts in rosidl_message_type_support_t
+                # (__get_type_hash / __get_type_description / __get_type_description_sources), which
+                # are defined in the C "<name>__description.c". Generating cpp alone leaves those
+                # includes dangling. Humble's type supports were self-contained, so cpp sufficed.
+                "--type", "c",
                 "--type", "cpp",
                 "--type-support", "cpp",
                 "--type-support", "introspection_cpp",
@@ -488,6 +497,19 @@ class ROSIDLGenerator:
             for subdir in include_dir.iterdir():
                 if subdir.is_dir():
                     cmd.extend(["-I", str(subdir.resolve())])
+
+            # Add the vendored ROS interface definitions. Jazzy's rosidl runs a type
+            # description/hash step (rosidl_generator_type_description) that must resolve every
+            # package an interface references, not just the ones we define. Every .srv depends on
+            # service_msgs/msg/ServiceEventInfo (service introspection), so without this the step
+            # dies with KeyError: 'service_msgs'. Humble had no such step, hence no such include.
+            #
+            # The include map is built by globbing **/*.idl under each -I path and taking each
+            # hit's grandparent as the package dir, so pointing at share/ picks up every vendored
+            # package (the .json type descriptions sit beside the .idl files).
+            share_dir = self.get_ament_prefix() / "share"
+            if share_dir.is_dir():
+                cmd.extend(["-I", str(share_dir.resolve())])
 
             try:
                 subprocess.run(cmd, check=True, capture_output=True, text=True, env=env)
@@ -545,9 +567,12 @@ class ROSIDLGenerator:
             if "fastrtps_cpp" in relative_str and "__type_support.cpp" in filename:
                 relative_str = relative_str.replace("__type_support.cpp", "__fastrtps_cpp_type_support.cpp")
 
-            # Remove cpp/, introspection_cpp/, fastrtps_cpp/ from path (can be at start or middle)
-            # Handle paths starting with these prefixes
-            for prefix in ["cpp/", "introspection_cpp/", "fastrtps_cpp/"]:
+            # Remove c/, cpp/, introspection_cpp/, fastrtps_cpp/ from path (can be at start or
+            # middle). Handle paths starting with these prefixes.
+            # The c/ and cpp/ generators both emit the .json type descriptions, which therefore
+            # land on the same destination twice; they are byte-identical, so the second write is
+            # a no-op rather than a conflict.
+            for prefix in ["c/", "cpp/", "introspection_cpp/", "fastrtps_cpp/"]:
                 prefix_backslash = prefix.replace("/", "\\")
                 if relative_str.startswith(prefix):
                     relative_str = relative_str[len(prefix):]
