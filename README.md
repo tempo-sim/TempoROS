@@ -216,6 +216,8 @@ On Windows, you must add a few private preprocessor definitions to the `Build.cs
 ```
 if (Target.Platform == UnrealTargetPlatform.Win64)
 {
+    PrivateDefinitions.Add("ROSIDL_GENERATOR_C_BUILDING_DLL_<custom_package_name_or_module_name_snake_case>=1");
+    PrivateDefinitions.Add("ROSIDL_GENERATOR_CPP_BUILDING_DLL_<custom_package_name_or_module_name_snake_case>=1");
     PrivateDefinitions.Add("ROSIDL_TYPESUPPORT_FASTRTPS_CPP_BUILDING_DLL_<custom_package_name_or_module_name_snake_case>=1");
     PrivateDefinitions.Add("ROSIDL_TYPESUPPORT_CPP_BUILDING_DLL=1");
     PrivateDefinitions.Add("ROSIDL_TYPESUPPORT_INTROSPECTION_CPP_BUILDING_DLL=1");
