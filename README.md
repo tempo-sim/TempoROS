@@ -22,8 +22,8 @@ Have a question? Find us on [![Discord](https://img.shields.io/badge/Discord-Joi
 
 ## Compatibility
 - Linux (Ubuntu 22.04 and 24.04), MacOS (13.0 "Ventura" or newer, Apple silicon only), Windows 10 and 11
-- Unreal Engine 5.6, 5.7, and 5.8
-- ROS 2 [humble](https://docs.ros.org/en/humble/index.html)
+- Unreal Engine 5.7, and 5.8
+- ROS 2 [Jazzy](https://docs.ros.org/en/jazzy/index.html)
 
 ## Prerequisites
 - Linux:
