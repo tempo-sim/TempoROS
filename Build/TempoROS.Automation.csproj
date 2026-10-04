@@ -55,11 +55,24 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
   </PropertyGroup>
+  <!--
+    Compile against the assemblies AutomationTool itself runs, as the engine ships them, rather than
+    against the engine's projects: a project reference makes `dotnet build` restore and build the
+    engine's own C# projects too, which an installed engine is not set up to do (NuGet audit
+    warnings in their packages fail the build, and native libraries they copy are missing).
+    AutomationTool loads this assembly beside those same assemblies, so they are not copied.
+  -->
+  <PropertyGroup>
+    <TempoAutomationToolDir>$(TempoEngineDir)\Binaries\DotNET\AutomationTool</TempoAutomationToolDir>
+    <!-- UE 5.8 puts AutomationUtils in a per-framework folder; 5.7 does not. -->
+    <TempoAutomationUtilsDll>$(TempoAutomationToolDir)\AutomationUtils\$(TargetFramework)\AutomationUtils.Automation.dll</TempoAutomationUtilsDll>
+    <TempoAutomationUtilsDll Condition="!Exists('$(TempoAutomationUtilsDll)')">$(TempoAutomationToolDir)\AutomationUtils\AutomationUtils.Automation.dll</TempoAutomationUtilsDll>
+  </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="$(TempoEngineDir)\Source\Programs\Shared\EpicGames.Core\EpicGames.Core.csproj" PrivateAssets="All"><Private>false</Private></ProjectReference>
-    <ProjectReference Include="$(TempoEngineDir)\Source\Programs\UnrealBuildTool\UnrealBuildTool.csproj" PrivateAssets="All"><Private>false</Private></ProjectReference>
-    <ProjectReference Include="$(TempoEngineDir)\Source\Programs\AutomationTool\AutomationUtils\AutomationUtils.Automation.csproj" PrivateAssets="All"><Private>false</Private></ProjectReference>
-    <ProjectReference Include="$(TempoEngineDir)\Source\Programs\AutomationTool\Scripts\AutomationScripts.Automation.csproj" PrivateAssets="All"><Private>false</Private></ProjectReference>
+    <Reference Include="EpicGames.Core" HintPath="$(TempoAutomationToolDir)\EpicGames.Core.dll" Private="false" />
+    <Reference Include="UnrealBuildTool" HintPath="$(TempoAutomationToolDir)\UnrealBuildTool.dll" Private="false" />
+    <Reference Include="AutomationUtils.Automation" HintPath="$(TempoAutomationUtilsDll)" Private="false" />
+    <Reference Include="Microsoft.Extensions.Logging.Abstractions" HintPath="$(TempoAutomationToolDir)\Microsoft.Extensions.Logging.Abstractions.dll" Private="false" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="System.Data.DataSetExtensions" Version="4.5.0" />

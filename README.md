@@ -255,17 +255,7 @@ To package an Unreal project with `TempoROS`, you must specify its custom stage 
 
 That is the only step. The handler is `Build/TempoROS.Automation.csproj`, and `AutomationTool` finds and builds it by itself: Unreal's rules scan looks in the `Build` folder of any plugin for automation projects. You do not need to pre-build it, pass `-ScriptDir`, or set any environment variable. It works whether you package with `RunUAT BuildCookRun` directly, from the editor's **Package Project** menu, or with the [convenient script in Tempo](https://github.com/tempo-sim/Tempo/blob/release/Scripts/Package.sh).
 
-The NuGet vulnerability database has a warning for the version of Magick that Unreal 5.6 and 5.7 are set to use. If packaging fails on that, work around it by creating a file, `<Unreal Engine Path>/Engine/Source/Programs/AutomationTool/Directory.Build.props`, with these contents:
-```
-<Project>
-  <PropertyGroup>
-    <!-- Disable NuGet security audit to prevent vulnerability warnings in Unreal Engine's
-         third-party packages (e.g. Magick.NET) from being treated as build errors. -->
-    <NuGetAudit>false</NuGetAudit>
-  </PropertyGroup>
-</Project>
-```
-If you are using the other Tempo plugins, this will be done automatically as part of their engine mods step.
+The handler compiles against the `AutomationTool` assemblies your engine ships, so it needs no changes to the engine.
 
 ## Known Issues
 - Sometimes the `GenROSIDL` prebuild steps fails with `TypeError: '>' not supported between instances of 'str' and 'int'` from `em.py`. Still debugging this, but for whatever reason it seems more likely to happen when using ssh.
