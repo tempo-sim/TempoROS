@@ -1,0 +1,80 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Locate the engine without help from the environment.
+
+    AutomationTool discovers this project automatically because it sits in the plugin's Build
+    folder (UnrealBuildTool's rules scan recurses into Source/ and Build/ of any directory holding
+    a .uplugin), and when it builds a script module it passes EngineDir and EnginePath as MSBuild
+    global properties - see EpicGames.MsBuild/CsProjBuilder.cs. Both are the Engine directory
+    itself, not its parent.
+
+    UNREAL_ENGINE_PATH stays as a fallback so a manual `dotnet build
+    -p:UNREAL_ENGINE_PATH=<engine root>` still works; note that one *is* the parent of Engine.
+  -->
+  <PropertyGroup>
+    <TempoEngineDir Condition="'$(EngineDir)' != ''">$(EngineDir)</TempoEngineDir>
+    <TempoEngineDir Condition="'$(TempoEngineDir)' == '' And '$(EnginePath)' != ''">$(EnginePath)</TempoEngineDir>
+    <TempoEngineDir Condition="'$(TempoEngineDir)' == ''">$(UNREAL_ENGINE_PATH)\Engine</TempoEngineDir>
+  </PropertyGroup>
+
+  <Import Project="$(TempoEngineDir)\Source\Programs\Shared\UnrealEngine.csproj.props" />
+
+  <PropertyGroup Condition="'$(MSBuildRuntimeType)' == 'Core' And '$(BundledNETCoreAppTargetFrameworkVersion)' >= '10.0'">
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(MSBuildRuntimeType)' == 'Core' And '$(BundledNETCoreAppTargetFrameworkVersion)' >= '8.0' And '$(BundledNETCoreAppTargetFrameworkVersion)' &lt; '10.0'">
+    <TargetFramework>net8.0</TargetFramework>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(MSBuildRuntimeType)' == 'Core' And '$(BundledNETCoreAppTargetFrameworkVersion)' &lt; '8.0'">
+    <TargetFramework>net6.0</TargetFramework>
+  </PropertyGroup>
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Development</Configuration>
+    <OutputType>Library</OutputType>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
+    <Configurations>Debug;Release;Development</Configurations>
+    <RootNamespace>Tempo.Automation</RootNamespace>
+    <AssemblyName>Tempo.Automation</AssemblyName>
+    <WarningsNotAsErrors>612,618</WarningsNotAsErrors>
+    <OutputPath>$(TempoEngineDir)\Binaries\DotNET\AutomationTool\AutomationScripts\Tempo</OutputPath>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <DebugType>pdbonly</DebugType>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Development|AnyCPU' ">
+    <DefineConstants>$(DefineConstants);TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DefineConstants>$(DefineConstants);TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DefineConstants>$(DefineConstants);DEBUG;TRACE</DefineConstants>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+  </PropertyGroup>
+  <!--
+    Compile against the assemblies AutomationTool itself runs, as the engine ships them, rather than
+    against the engine's projects: a project reference makes `dotnet build` restore and build the
+    engine's own C# projects too, which an installed engine is not set up to do (NuGet audit
+    warnings in their packages fail the build, and native libraries they copy are missing).
+    AutomationTool loads this assembly beside those same assemblies, so they are not copied.
+  -->
+  <PropertyGroup>
+    <TempoAutomationToolDir>$(TempoEngineDir)\Binaries\DotNET\AutomationTool</TempoAutomationToolDir>
+    <!-- UE 5.8 puts AutomationUtils in a per-framework folder; 5.7 does not. -->
+    <TempoAutomationUtilsDll>$(TempoAutomationToolDir)\AutomationUtils\$(TargetFramework)\AutomationUtils.Automation.dll</TempoAutomationUtilsDll>
+    <TempoAutomationUtilsDll Condition="!Exists('$(TempoAutomationUtilsDll)')">$(TempoAutomationToolDir)\AutomationUtils\AutomationUtils.Automation.dll</TempoAutomationUtilsDll>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="EpicGames.Core" HintPath="$(TempoAutomationToolDir)\EpicGames.Core.dll" Private="false" />
+    <Reference Include="UnrealBuildTool" HintPath="$(TempoAutomationToolDir)\UnrealBuildTool.dll" Private="false" />
+    <Reference Include="AutomationUtils.Automation" HintPath="$(TempoAutomationUtilsDll)" Private="false" />
+    <Reference Include="Microsoft.Extensions.Logging.Abstractions" HintPath="$(TempoAutomationToolDir)\Microsoft.Extensions.Logging.Abstractions.dll" Private="false" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="System.Data.DataSetExtensions" Version="4.5.0" />
+  </ItemGroup>
+</Project>
