@@ -24,7 +24,7 @@ fi
 # Check for jq
 if ! which jq &> /dev/null; then
   echo "Couldn't find jq"
-  if [[ "$OSTYPE" = "msys" ]]; then
+  if [[ "$OSTYPE" = "msys"* || "$OSTYPE" = "cygwin"* ]]; then
     echo "Install (on Windows): curl -L -o /usr/bin/jq.exe https://github.com/stedolan/jq/releases/latest/download/jq-win64.exe)"
   elif [[ "$OSTYPE" = "darwin"* ]]; then
     echo "Install (on Mac): brew install jq"
@@ -65,12 +65,15 @@ if [ "$TEMPOROS_ENABLED" = "false" ]; then
   exit 0
 fi
 
-if [[ "$OSTYPE" = "msys" ]]; then
+if [[ "$OSTYPE" = "msys"* || "$OSTYPE" = "cygwin"* ]]; then
   PLATFORM="Windows"
 elif [[ "$OSTYPE" = "darwin"* ]]; then
   PLATFORM="Mac"
 elif [[ "$OSTYPE" = "linux-gnu"* ]]; then
   PLATFORM="Linux"
+else
+  echo "Unsupported platform (OSTYPE=$OSTYPE)"
+  exit 1
 fi
 
 # This computes a hash on the filenames, sizes, and modification time of all the third party dependency files.
@@ -78,7 +81,7 @@ GET_HASH() {
   local ARTIFACT_DIR=$1
 
   # Get Unreal Python path
-  if [[ "$OSTYPE" = "msys" ]]; then
+  if [[ "$OSTYPE" = "msys"* || "$OSTYPE" = "cygwin"* ]]; then
     PYTHON_PATH="$UNREAL_ENGINE_PATH/Engine/Binaries/ThirdParty/Python3/Win64/python.exe"
   elif [[ "$OSTYPE" = "darwin"* ]]; then
     PYTHON_PATH="$UNREAL_ENGINE_PATH/Engine/Binaries/ThirdParty/Python3/Mac/bin/python3"

@@ -47,7 +47,7 @@ FIND_PROJECT_ROOT() {
 # Activates the Tempo virtual environment, which points to Unreal's python and contains ROS package
 # dependencies, if it is found.
 ACTIVATE_PYTHON_VENV() {
-  if [[ "$OSTYPE" != "msys" ]]; then
+  if [[ "$OSTYPE" != "msys"* && "$OSTYPE" != "cygwin"* ]]; then
     PROJECT_ROOT=$(FIND_PROJECT_ROOT "$TEMPOROS_ROOT")
     
     if [ ! -f "$PROJECT_ROOT/TempoEnv/bin/activate" ]; then
@@ -86,7 +86,7 @@ export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
 
 RCLCPP_DIR="$TEMPOROS_ROOT/Source/ThirdParty/rclcpp"
 
-if [[ "$OSTYPE" = "msys" ]]; then
+if [[ "$OSTYPE" = "msys"* || "$OSTYPE" = "cygwin"* ]]; then
   SET_OR_APPEND_ENV "AMENT_PREFIX_PATH" "$RCLCPP_DIR/Binaries/Windows"
   SET_OR_APPEND_ENV "PYTHONPATH" "$RCLCPP_DIR/Libraries/Windows/python3.11/site-packages"
   SET_OR_APPEND_ENV "PATH" "$RCLCPP_DIR/Binaries/Windows"
