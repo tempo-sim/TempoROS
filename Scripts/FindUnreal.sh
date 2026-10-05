@@ -9,7 +9,7 @@ set -e
 # Check for jq
 if ! which jq &> /dev/null; then
     echo "Couldn't find jq"
-    if [[ "$OSTYPE" = "msys" ]]; then
+    if [[ "$OSTYPE" = "msys"* || "$OSTYPE" = "cygwin"* ]]; then
         echo "Install (on Windows): curl -L -o /usr/bin/jq.exe https://github.com/stedolan/jq/releases/latest/download/jq-win64.exe)"
     elif [[ "$OSTYPE" = "darwin"* ]]; then
         echo "Install (on Mac): brew install jq"
@@ -74,7 +74,7 @@ EXTRACT_ENGINE_ASSOCIATION() {
 
 # Function to get the Epic Games engine registry path based on OS
 GET_REGISTRY_PATH() {
-    if [[ "$OSTYPE" = "msys" ]]; then
+    if [[ "$OSTYPE" = "msys"* || "$OSTYPE" = "cygwin"* ]]; then
         # Possible LauncherInstalled.dat locations on Windows (may not always exist)
         local POSSIBLE_PATHS=(
             "$APPDATA/Epic/UnrealEngineLauncher/LauncherInstalled.dat"
