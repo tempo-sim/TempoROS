@@ -39,7 +39,6 @@ struct IPublisherSupportInterface
 {
 	virtual ~IPublisherSupportInterface() = default;
 	virtual const std::shared_ptr<rclcpp::Node>& GetNode() const = 0;
-	virtual const std::unique_ptr<image_transport::ImageTransport>& GetImageTransport() const = 0;
 };
 
 struct FTempoROSPublisher
@@ -109,11 +108,22 @@ template <ImageConvertible MessageType>
 struct TTempoROSPublisher<MessageType> : FTempoROSPublisher
 {
 	TTempoROSPublisher(const IPublisherSupportInterface* PublisherSupport, const FString& Topic, const FROSQOSProfile& QOSProfile, bool bPrependNodeName)
-		: Node(PublisherSupport->GetNode()), Publisher(PublisherSupport->GetImageTransport()->advertise(
-			bPrependNodeName ? TCHAR_TO_UTF8(*PrependNodeName(Node, Topic)) : TCHAR_TO_UTF8(*Topic),
-			QOSProfile.QueueSize,
-			QOSProfile.Durability == EROSQOSDurability::TransientLocal,
-			TempoROSPublisherOptions())) {}
+		: Node(PublisherSupport->GetNode())
+	{
+		const FString ResolvedTopic = bPrependNodeName ? PrependNodeName(Node, Topic) : Topic;
+		// This free function, rather than ImageTransport::advertise, because no advertise overload
+		// takes rclcpp::PublisherOptions and so none can carry TempoROSPublisherOptions() and its
+		// polymorphic allocator. It also takes the QoS as an rmw_qos_profile_t instead of a queue
+		// size plus a `latch` bool, so the whole FROSQOSProfile comes through (reliability,
+		// history) rather than just depth and durability. Taking the node directly is why
+		// TempoROSNode needs no image_transport::ImageTransport instance at all.
+		Publisher = image_transport::create_publisher(
+			Node.get(),
+			TCHAR_TO_UTF8(*ResolvedTopic),
+			QOSProfile.ToROS().get_rmw_qos_profile(),
+			TempoROSPublisherOptions()
+		);
+	}
 
 	void Publish(const MessageType& Message) const
 	{

@@ -22,8 +22,8 @@ Have a question? Find us on [![Discord](https://img.shields.io/badge/Discord-Joi
 
 ## Compatibility
 - Linux (Ubuntu 22.04 and 24.04), MacOS (13.0 "Ventura" or newer, Apple silicon only), Windows 10 and 11
-- Unreal Engine 5.6, 5.7, and 5.8
-- ROS 2 [humble](https://docs.ros.org/en/humble/index.html)
+- Unreal Engine 5.7, and 5.8
+- ROS 2 [Jazzy](https://docs.ros.org/en/jazzy/index.html)
 
 ## Prerequisites
 - Linux:
@@ -216,6 +216,8 @@ On Windows, you must add a few private preprocessor definitions to the `Build.cs
 ```
 if (Target.Platform == UnrealTargetPlatform.Win64)
 {
+    PrivateDefinitions.Add("ROSIDL_GENERATOR_C_BUILDING_DLL_<custom_package_name_or_module_name_snake_case>=1");
+    PrivateDefinitions.Add("ROSIDL_GENERATOR_CPP_BUILDING_DLL_<custom_package_name_or_module_name_snake_case>=1");
     PrivateDefinitions.Add("ROSIDL_TYPESUPPORT_FASTRTPS_CPP_BUILDING_DLL_<custom_package_name_or_module_name_snake_case>=1");
     PrivateDefinitions.Add("ROSIDL_TYPESUPPORT_CPP_BUILDING_DLL=1");
     PrivateDefinitions.Add("ROSIDL_TYPESUPPORT_INTROSPECTION_CPP_BUILDING_DLL=1");
