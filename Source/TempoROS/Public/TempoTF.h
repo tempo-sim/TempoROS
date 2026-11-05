@@ -79,24 +79,41 @@ private:
 
 struct FTempoTFListener
 {
-	static rclcpp::SubscriptionOptions SubOptions()
+	// QosOverridingOptions' initializer_list constructor is defined in the prebuilt rclcpp library, so the
+	// policy list it allocates comes from that library's heap, while its (implicit, inline) destructor runs
+	// here and frees with this module's operator delete (FMemory), corrupting the heap. So we construct each
+	// one exactly once, deliberately never destroy it, and only hand out copies - which are allocated (by the
+	// implicit copy assignment) and freed here, with FMemory.
+	static const rclcpp::QosOverridingOptions& DynamicQosOverrides()
 	{
-		rclcpp::SubscriptionOptions Options = TempoROSSubscriptionOptions();
-		Options.qos_overriding_options = rclcpp::QosOverridingOptions{
+		static const rclcpp::QosOverridingOptions* Overrides = new rclcpp::QosOverridingOptions{
 			rclcpp::QosPolicyKind::Depth,
 			rclcpp::QosPolicyKind::Durability,
 			rclcpp::QosPolicyKind::History,
 			rclcpp::QosPolicyKind::Reliability};
+		return *Overrides;
+	}
+
+	static const rclcpp::QosOverridingOptions& StaticQosOverrides()
+	{
+		static const rclcpp::QosOverridingOptions* Overrides = new rclcpp::QosOverridingOptions{
+			rclcpp::QosPolicyKind::Depth,
+			rclcpp::QosPolicyKind::History,
+			rclcpp::QosPolicyKind::Reliability};
+		return *Overrides;
+	}
+
+	static rclcpp::SubscriptionOptions SubOptions()
+	{
+		rclcpp::SubscriptionOptions Options = TempoROSSubscriptionOptions();
+		Options.qos_overriding_options = DynamicQosOverrides();
 		return Options;
 	}
 
 	static rclcpp::SubscriptionOptions StaticSubOptions()
 	{
 		rclcpp::SubscriptionOptions Options = TempoROSSubscriptionOptions();
-		Options.qos_overriding_options = rclcpp::QosOverridingOptions{
-			rclcpp::QosPolicyKind::Depth,
-			rclcpp::QosPolicyKind::History,
-			rclcpp::QosPolicyKind::Reliability};
+		Options.qos_overriding_options = StaticQosOverrides();
 		return Options;
 	}
 

@@ -68,7 +68,13 @@ public class rclcpp : ModuleRules
         PublicIncludePaths.Add(Path.Combine(ModuleDirectory, "Public"));
         
         ModuleDepPaths moduleDepPaths = GatherDeps();
-        PublicIncludePaths.AddRange(moduleDepPaths.HeaderPaths);
+        // The vendored ROS tree goes in as system includes (-isystem / -external:I) so its headers
+        // are exempt from Unreal's warnings-as-errors. These are upstream sources we do not own and
+        // cannot restyle, and they are not written to Unreal's warning settings: Fast-CDR's Cdr.h,
+        // for one, tests `#if !__APPLE__ && !__FreeBSD__ && !__VXWORKS__` on macros that are simply
+        // undefined on Linux, which -Wundef -Werror rejects. Suppressing warnings per-macro in
+        // Patches/ would be a treadmill across ~226 packages. Real errors still surface normally.
+        PublicSystemIncludePaths.AddRange(moduleDepPaths.HeaderPaths);
         PublicAdditionalLibraries.AddRange(moduleDepPaths.LibraryPaths);
 
         if (Target.Platform == UnrealTargetPlatform.Win64)

@@ -22,8 +22,11 @@ Have a question? Find us on [![Discord](https://img.shields.io/badge/Discord-Joi
 
 ## Compatibility
 - Linux (Ubuntu 22.04 and 24.04), MacOS (13.0 "Ventura" or newer, Apple silicon only), Windows 10 and 11
-- Unreal Engine 5.6, 5.7, and 5.8
-- ROS 2 [humble](https://docs.ros.org/en/humble/index.html)
+- Unreal Engine 5.7 and 5.8
+- ROS 2 [Jazzy](https://docs.ros.org/en/jazzy/index.html)
+
+> [!Note]
+> **Need ROS 2 Humble?** Use the [`humble`](https://github.com/tempo-sim/TempoROS/tree/humble) branch, which also supports Unreal Engine 5.6. Humble is nearing end-of-life, so that branch is provided as-is with no promise of ongoing support.
 
 ## Prerequisites
 - Linux:
@@ -104,7 +107,7 @@ Using `TempoROS` from Blueprint is also straightforward. This Blueprint is equiv
 
 `TempoROS`'s design was challenging to implement for several reasons:
 - `rclcpp` relies on several assumptions about the layout of a C++ codebase and locations of compiled libraries, so `TempoROS` attempts to satisfy those assumptions in the Unreal project's environment, including by organizing generated code in just the right way and setting several environment variables to help `rclcpp` find the libraries it needs during compilation, linking, and runtime.
-- `rclcpp` has a large number of [third party dependencies](https://raw.githubusercontent.com/ros2/ros2/humble/ros2.repos), several of which are also dependencies of Unreal. To avoid compatibility issues when combining the two systems, `TempoROS` uses a custom build of `rclcpp` linked against Unreal's third party libraries.
+- `rclcpp` has a large number of [third party dependencies](https://raw.githubusercontent.com/ros2/ros2/jazzy/ros2.repos), several of which are also dependencies of Unreal. To avoid compatibility issues when combining the two systems, `TempoROS` uses a custom build of `rclcpp` linked against Unreal's third party libraries.
 - `rclcpp` uses C++ features that are not enabled by default in Unreal C++ projects, including exceptions and RTTI (`dynamic_cast` and `type_id`). To resolve the former, users must enable exceptions in modules that depend on `TempoROS` (see Project Requirements). For the latter, `TempoROS` uses a modified `rclcpp` with any uses of RTTI from header files removed.
 
 ## User Guide
@@ -216,6 +219,8 @@ On Windows, you must add a few private preprocessor definitions to the `Build.cs
 ```
 if (Target.Platform == UnrealTargetPlatform.Win64)
 {
+    PrivateDefinitions.Add("ROSIDL_GENERATOR_C_BUILDING_DLL_<custom_package_name_or_module_name_snake_case>=1");
+    PrivateDefinitions.Add("ROSIDL_GENERATOR_CPP_BUILDING_DLL_<custom_package_name_or_module_name_snake_case>=1");
     PrivateDefinitions.Add("ROSIDL_TYPESUPPORT_FASTRTPS_CPP_BUILDING_DLL_<custom_package_name_or_module_name_snake_case>=1");
     PrivateDefinitions.Add("ROSIDL_TYPESUPPORT_CPP_BUILDING_DLL=1");
     PrivateDefinitions.Add("ROSIDL_TYPESUPPORT_INTROSPECTION_CPP_BUILDING_DLL=1");
