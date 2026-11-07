@@ -43,7 +43,11 @@ public class rclcpp : ModuleRules
         }
         else if (Target.Platform == UnrealTargetPlatform.Mac)
         {
-            LibraryPaths.AddRange(FindFilesInDirectory(Path.Combine(ModuleDirectory, "Libraries", "Mac"), "dylib"));
+            // Link only the top-level ROS libraries. Nested dylibs are Python packages' private
+            // dependencies (e.g. numpy/.dylibs), whose install names are delocate's /DLC/...
+            // placeholders: linking them records those absolute, nonexistent paths in the module,
+            // which then fails to load. They are still staged below for the Python bindings.
+            LibraryPaths.AddRange(Directory.EnumerateFiles(Path.Combine(ModuleDirectory, "Libraries", "Mac"), "*.dylib", SearchOption.TopDirectoryOnly));
             RuntimeLibraryPaths.AddRange(FindFilesInDirectory(Path.Combine(ModuleDirectory, "Libraries", "Mac"), "dylib"));
             RuntimeLibraryPaths.AddRange(FindFilesInDirectory(Path.Combine(ModuleDirectory, "Libraries", "Mac", "share"), "*"));
         }
