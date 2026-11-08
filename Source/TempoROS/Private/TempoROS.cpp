@@ -48,8 +48,8 @@ void FTempoROSModule::ShutdownModule()
 
 bool FTempoROSModule::IsROSInitialized()
 {
-	// rclcpp::ok() reports whether the global default context is valid: false before rclcpp::init succeeds,
-	// after rclcpp::shutdown, and after rclcpp's own signal handler shuts the context down.
+	// rclcpp::ok() reports whether the global default context is valid: false before rclcpp::init succeeds
+	// and after rclcpp::shutdown. (rclcpp's signal handlers are not installed; see InitROS.)
 	return rclcpp::ok();
 }
 
@@ -97,7 +97,12 @@ void FTempoROSModule::InitROS()
 
 	try
 	{
-		rclcpp::init(0, nullptr);
+		// Leave SIGINT/SIGTERM to Unreal. With rclcpp's default (SignalHandlerOptions::All) its own handler
+		// replaces the engine's and shuts the global context down the moment the signal arrives, while the
+		// engine is still running frames: the next node or publisher created against that dead context
+		// throws ("rcl node's context is invalid"), e.g. a TF broadcaster created during a map load. Unreal's
+		// handler requests a graceful exit instead, and ShutdownModule shuts rclcpp down at the right time.
+		rclcpp::init(0, nullptr, rclcpp::InitOptions(), rclcpp::SignalHandlerOptions::None);
 	}
 	catch (const std::exception& E)
 	{
