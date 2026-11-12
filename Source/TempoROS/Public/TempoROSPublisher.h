@@ -24,10 +24,23 @@ inline rclcpp::PublisherOptions TempoROSPublisherOptions()
 {
 	// rclcpp::PublisherOptions defaults its allocator type to std::pmr::polymorphic_allocator<void>,
 	// which picks up the default memory resource set in SetUnrealDefaultMemoryResource() at startup.
-	rclcpp::PublisherOptions PublisherOptions;
-	// See TempoROSSubscriptionOptions.
-	PublisherOptions.use_default_callbacks = false;
-	return PublisherOptions;
+	//
+	// Every publisher gets a copy of one options object that is never destroyed. With an allocator
+	// other than std::allocator, rclcpp hands rcl an allocator whose state points at an object the
+	// options own, shared by their copies. A publisher keeps a copy, as a member, but releases its
+	// rcl handle in its base class's destructor, after its members are gone; if the publisher's copy
+	// was the last, rcl_publisher_fini then frees through an allocator that has just been deleted,
+	// which crashed whenever a node was destroyed. Converting the options once here creates that
+	// object, and this copy of the options keeps it alive past every publisher.
+	static const rclcpp::PublisherOptions* const Prototype = []
+	{
+		rclcpp::PublisherOptions* Options = new rclcpp::PublisherOptions();
+		// See TempoROSSubscriptionOptions.
+		Options->use_default_callbacks = false;
+		Options->to_rcl_publisher_options<sensor_msgs::msg::Image>(rclcpp::QoS(1));
+		return Options;
+	}();
+	return *Prototype;
 }
 
 static FString PrependNodeName(const std::shared_ptr<rclcpp::Node>& Node, const FString& Topic)
