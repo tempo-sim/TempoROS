@@ -2,27 +2,27 @@
   "5.8": {
     "artifact": "rclcpp",
     "release": {
-      "Linux": "v0.19",
-      "Mac": "v0.19",
-      "Windows": "v0.19"
+      "Linux": "v0.20",
+      "Mac": "v0.20",
+      "Windows": "v0.20"
     },
     "md5_hashes": {
-      "Linux": "55b1b5ab13020c97e55a2b0838063a30",
-      "Mac": "4615766c7023d156da1160fd13cafb4b",
-      "Windows": "805ac949cf8e7f5745fdc54625aee19b"
+      "Linux": "52aca3d296eb3293bd745e14fd62deec",
+      "Mac": "bc00b4181f28851b89303ba9770300ab",
+      "Windows": "7cb7700f7654b05384cc3d554c464659"
     }
   },
   "5.7": {
     "artifact": "rclcpp",
     "release": {
-      "Linux": "v0.19",
-      "Mac": "v0.19",
-      "Windows": "v0.19"
+      "Linux": "v0.20",
+      "Mac": "v0.20",
+      "Windows": "v0.20"
     },
     "md5_hashes": {
-      "Linux": "55b1b5ab13020c97e55a2b0838063a30",
-      "Mac": "4615766c7023d156da1160fd13cafb4b",
-      "Windows": "805ac949cf8e7f5745fdc54625aee19b"
+      "Linux": "52aca3d296eb3293bd745e14fd62deec",
+      "Mac": "bc00b4181f28851b89303ba9770300ab",
+      "Windows": "7cb7700f7654b05384cc3d554c464659"
     }
   }
 }
