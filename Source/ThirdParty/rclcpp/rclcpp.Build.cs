@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
 using UnrealBuildTool;
 
@@ -27,6 +28,60 @@ public class rclcpp : ModuleRules
         return Directory.EnumerateFiles(dir, "*." + suffix, SearchOption.AllDirectories);
     }
 
+    // A versioned shared library comes as a chain of names: libX.dylib -> libX.N.dylib -> libX.N.M.P.dylib
+    // (libX.so -> libX.so.N -> libX.so.N.M.P on Linux). Staging copies each symlink as a regular file, so
+    // staging every name would ship each such library two or three times over. The loader only ever asks
+    // for one of them - the install name (Mac) or SONAME (Linux), which in this layout is always what the
+    // unversioned name links to - so keep just that one, and staging yields exactly one file per library.
+    // Anything that does not fit the pattern is kept whole.
+    //
+    // This deliberately only drops names, never remaps one: RuntimeDependencies.Add(Path, SourcePath)
+    // copies SourcePath to Path at build time, which here would write through a symlink in the source tree.
+    private static IEnumerable<string> OneNamePerLibrary(IEnumerable<string> paths)
+    {
+        List<string> all = paths.Select(p => Path.GetFullPath(p)).Distinct().ToList();
+        HashSet<string> present = new HashSet<string>(all);
+
+        Dictionary<string, string> linkTargets = new Dictionary<string, string>();
+        foreach (string p in all)
+        {
+            string target = new FileInfo(p).LinkTarget;
+            if (target != null)
+            {
+                linkTargets[p] = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(p), target));
+            }
+        }
+
+        string Resolve(string p)
+        {
+            HashSet<string> seen = new HashSet<string>();
+            while (linkTargets.TryGetValue(p, out string next) && seen.Add(p))
+            {
+                p = next;
+            }
+            return p;
+        }
+
+        foreach (IGrouping<string, string> library in all.GroupBy(Resolve))
+        {
+            if (library.Count() > 1)
+            {
+                HashSet<string> linkedTo = new HashSet<string>(library.Where(linkTargets.ContainsKey).Select(p => linkTargets[p]));
+                List<string> unversioned = library.Where(p => linkTargets.ContainsKey(p) && !linkedTo.Contains(p)).ToList();
+                if (unversioned.Count == 1 && present.Contains(linkTargets[unversioned[0]]))
+                {
+                    yield return linkTargets[unversioned[0]];
+                    continue;
+                }
+            }
+
+            foreach (string p in library)
+            {
+                yield return p;
+            }
+        }
+    }
+
     public ModuleDepPaths GatherDeps()
     {
         List<string> HeaderPaths = new List<string>();
@@ -48,13 +103,13 @@ public class rclcpp : ModuleRules
             // placeholders: linking them records those absolute, nonexistent paths in the module,
             // which then fails to load. They are still staged below for the Python bindings.
             LibraryPaths.AddRange(Directory.EnumerateFiles(Path.Combine(ModuleDirectory, "Libraries", "Mac"), "*.dylib", SearchOption.TopDirectoryOnly));
-            RuntimeLibraryPaths.AddRange(FindFilesInDirectory(Path.Combine(ModuleDirectory, "Libraries", "Mac"), "dylib"));
+            RuntimeLibraryPaths.AddRange(OneNamePerLibrary(FindFilesInDirectory(Path.Combine(ModuleDirectory, "Libraries", "Mac"), "dylib")));
             RuntimeLibraryPaths.AddRange(FindFilesInDirectory(Path.Combine(ModuleDirectory, "Libraries", "Mac", "share"), "*"));
         }
         else if (Target.Platform == UnrealTargetPlatform.Linux)
         {
             LibraryPaths.AddRange(FindFilesInDirectory(Path.Combine(ModuleDirectory, "Libraries", "Linux"), "so"));
-            RuntimeLibraryPaths.AddRange(FindFilesInDirectory(Path.Combine(ModuleDirectory, "Libraries", "Linux"), "so*"));
+            RuntimeLibraryPaths.AddRange(OneNamePerLibrary(FindFilesInDirectory(Path.Combine(ModuleDirectory, "Libraries", "Linux"), "so*")));
             RuntimeLibraryPaths.AddRange(FindFilesInDirectory(Path.Combine(ModuleDirectory, "Libraries", "Linux", "share"), "*"));
         }
         else

@@ -256,11 +256,11 @@ However, raw image data can be heavy, so ROS also comes with an [image transport
 ## Packaging
 You can use `TempoROS` as part of a packaged game.
 
-To package an Unreal project with `TempoROS`, you must specify its custom stage copy handler by adding `CustomStageCopyHandler=TempoROSCopyHandler` to your `Config/DefaultGame.ini`. This allows the package process to correctly copy symbolic links in the `rclcpp` libraries on all platforms.
+Packaging needs no setup: no config, no packaging arguments, and no particular packaging script. Package with `RunUAT BuildCookRun`, the editor's **Package Project** menu, or any script that wraps them.
 
-That is the only step. The handler is `Build/TempoROS.Automation.csproj`, and `AutomationTool` finds and builds it by itself: Unreal's rules scan looks in the `Build` folder of any plugin for automation projects. You do not need to pre-build it, pass `-ScriptDir`, or set any environment variable. It works whether you package with `RunUAT BuildCookRun` directly, from the editor's **Package Project** menu, or with the [convenient script in Tempo](https://github.com/tempo-sim/Tempo/blob/release/Scripts/Package.sh).
+The `rclcpp` libraries come as chains of symlinks (`libddsc.dylib -> libddsc.0.dylib -> libddsc.0.10.5.dylib`), and staging turns every symlink into a full copy. So `rclcpp.Build.cs` stages just one name per library: the one the dynamic loader asks for (its install name on Mac, its `SONAME` on Linux). Each library lands in the package once.
 
-The handler compiles against the `AutomationTool` assemblies your engine ships, so it needs no changes to the engine.
+Older versions of `TempoROS` needed `CustomStageCopyHandler=TempoROSCopyHandler` in `Config/DefaultGame.ini`. That handler no longer exists, so remove the line if you have it. If you leave it in, packaging logs `Failed to create custom stage copy handler 'TempoROSCopyHandler'` but otherwise works.
 
 ## Known Issues
 - Sometimes the `GenROSIDL` prebuild steps fails with `TypeError: '>' not supported between instances of 'str' and 'int'` from `em.py`. Still debugging this, but for whatever reason it seems more likely to happen when using ssh.
