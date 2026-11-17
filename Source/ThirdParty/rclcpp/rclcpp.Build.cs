@@ -31,16 +31,16 @@ public class rclcpp : ModuleRules
     // A versioned shared library comes as a chain of names: libX.dylib -> libX.N.dylib -> libX.N.M.P.dylib
     // (libX.so -> libX.so.N -> libX.so.N.M.P on Linux). Staging copies each symlink as a regular file, so
     // staging every name would ship each such library two or three times over. The loader only ever asks
-    // for one of them - the install name (Mac) or SONAME (Linux), which in this layout is always what the
-    // unversioned name links to - so keep just that one, and staging yields exactly one file per library.
-    // Anything that does not fit the pattern is kept whole.
+    // for one of them - the install name (Mac) or SONAME (Linux) recorded in the library itself - so read
+    // that out of the file and keep just the name that matches it, and staging yields exactly one file per
+    // library. A library whose recorded name cannot be read, or matches none of its names, is kept whole,
+    // with a warning.
     //
     // This deliberately only drops names, never remaps one: RuntimeDependencies.Add(Path, SourcePath)
     // copies SourcePath to Path at build time, which here would write through a symlink in the source tree.
     private static IEnumerable<string> OneNamePerLibrary(IEnumerable<string> paths)
     {
         List<string> all = paths.Select(p => Path.GetFullPath(p)).Distinct().ToList();
-        HashSet<string> present = new HashSet<string>(all);
 
         Dictionary<string, string> linkTargets = new Dictionary<string, string>();
         foreach (string p in all)
@@ -66,19 +66,134 @@ public class rclcpp : ModuleRules
         {
             if (library.Count() > 1)
             {
-                HashSet<string> linkedTo = new HashSet<string>(library.Where(linkTargets.ContainsKey).Select(p => linkTargets[p]));
-                List<string> unversioned = library.Where(p => linkTargets.ContainsKey(p) && !linkedTo.Contains(p)).ToList();
-                if (unversioned.Count == 1 && present.Contains(linkTargets[unversioned[0]]))
+                string loaderName = ReadLoaderName(library.Key);
+                List<string> matches = library.Where(p => Path.GetFileName(p) == loaderName).ToList();
+                if (matches.Count == 1)
                 {
-                    yield return linkTargets[unversioned[0]];
+                    yield return matches[0];
                     continue;
                 }
+
+                Console.WriteLine("rclcpp: Warning: staging all " + library.Count() + " names of " + library.Key + ": " +
+                                  (loaderName == null
+                                      ? "could not read its install name / SONAME"
+                                      : "its install name / SONAME '" + loaderName + "' matches " + matches.Count + " of them"));
             }
 
             foreach (string p in library)
             {
                 yield return p;
             }
+        }
+    }
+
+    // The file name the loader asks for when something links against this library: the last component
+    // of a Mach-O's LC_ID_DYLIB install name, or an ELF's DT_SONAME. Null if it has none or is unreadable.
+    // Read straight from the file, rather than via otool/readelf, so it works when cross-compiling too.
+    private static string ReadLoaderName(string path)
+    {
+        try
+        {
+            using FileStream stream = File.OpenRead(path);
+            using BinaryReader reader = new BinaryReader(stream);
+
+            string ReadString(long offset)
+            {
+                stream.Seek(offset, SeekOrigin.Begin);
+                List<byte> bytes = new List<byte>();
+                for (byte b = reader.ReadByte(); b != 0 && bytes.Count < 1024; b = reader.ReadByte())
+                {
+                    bytes.Add(b);
+                }
+                return Path.GetFileName(System.Text.Encoding.UTF8.GetString(bytes.ToArray()));
+            }
+
+            uint magic = reader.ReadUInt32();
+
+            if (magic == 0x464C457F) // "\x7FELF"
+            {
+                if (reader.ReadByte() != 2 || reader.ReadByte() != 1) // 64-bit, little-endian
+                {
+                    return null;
+                }
+                stream.Seek(0x28, SeekOrigin.Begin);
+                long sectionHeaders = reader.ReadInt64();
+                stream.Seek(0x3A, SeekOrigin.Begin);
+                int sectionHeaderSize = reader.ReadUInt16();
+                int sectionCount = reader.ReadUInt16();
+                for (int i = 0; i < sectionCount; i++)
+                {
+                    long header = sectionHeaders + (long)i * sectionHeaderSize;
+                    stream.Seek(header + 0x04, SeekOrigin.Begin);
+                    if (reader.ReadUInt32() != 6) // SHT_DYNAMIC
+                    {
+                        continue;
+                    }
+                    stream.Seek(header + 0x18, SeekOrigin.Begin);
+                    long dynamicOffset = reader.ReadInt64();
+                    long dynamicSize = reader.ReadInt64();
+                    uint stringSection = reader.ReadUInt32();
+                    stream.Seek(sectionHeaders + (long)stringSection * sectionHeaderSize + 0x18, SeekOrigin.Begin);
+                    long stringsOffset = reader.ReadInt64();
+                    for (long entry = dynamicOffset; entry < dynamicOffset + dynamicSize; entry += 16)
+                    {
+                        stream.Seek(entry, SeekOrigin.Begin);
+                        long tag = reader.ReadInt64();
+                        long value = reader.ReadInt64();
+                        if (tag == 14) // DT_SONAME
+                        {
+                            return ReadString(stringsOffset + value);
+                        }
+                        if (tag == 0) // DT_NULL
+                        {
+                            break;
+                        }
+                    }
+                }
+                return null;
+            }
+
+            // A universal binary holds one Mach-O per architecture, all with the same install name, behind
+            // a big-endian header. Take the first.
+            long start = 0;
+            if (magic == 0xBEBAFECA || magic == 0xBFBAFECA) // FAT_MAGIC, FAT_MAGIC_64
+            {
+                stream.Seek(16, SeekOrigin.Begin);
+                byte[] offset = reader.ReadBytes(magic == 0xBEBAFECA ? 4 : 8);
+                foreach (byte b in offset)
+                {
+                    start = (start << 8) | b;
+                }
+                stream.Seek(start, SeekOrigin.Begin);
+                magic = reader.ReadUInt32();
+            }
+            if (magic != 0xFEEDFACF) // MH_MAGIC_64
+            {
+                return null;
+            }
+            stream.Seek(start + 16, SeekOrigin.Begin);
+            uint commandCount = reader.ReadUInt32();
+            long command = start + 32;
+            for (uint i = 0; i < commandCount; i++)
+            {
+                stream.Seek(command, SeekOrigin.Begin);
+                uint id = reader.ReadUInt32();
+                uint size = reader.ReadUInt32();
+                if (id == 0xD) // LC_ID_DYLIB
+                {
+                    return ReadString(command + reader.ReadUInt32());
+                }
+                if (size == 0)
+                {
+                    return null;
+                }
+                command += size;
+            }
+            return null;
+        }
+        catch (Exception)
+        {
+            return null;
         }
     }
 
