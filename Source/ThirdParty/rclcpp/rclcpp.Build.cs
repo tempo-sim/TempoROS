@@ -269,7 +269,7 @@ public class rclcpp : ModuleRules
         }
         else
         {
-            Console.WriteLine("Unsupported target platform for module rclcpp.");
+            Target.Logger.LogWarning("rclcpp: unsupported target platform {Platform}", Target.Platform);
         }
 
         return new ModuleDepPaths(HeaderPaths.ToArray(), LibraryPaths.ToArray(), RuntimeLibraryPaths.ToArray());
@@ -360,12 +360,12 @@ public class rclcpp : ModuleRules
                 }
                 else if (!Match.Success)
                 {
-                    Console.WriteLine("rclcpp: Warning: could not parse clang version from: " + Output);
+                    Target.Logger.LogWarning("rclcpp: could not parse clang version from: {Output}", Output);
                 }
             }
             catch (Exception Ex)
             {
-                Console.WriteLine("rclcpp: Warning: failed to query clang version: " + Ex.Message);
+                Target.Logger.LogWarning("rclcpp: failed to query clang version: {Message}", Ex.Message);
             }
             if (NeedNoRTTI)
             {
