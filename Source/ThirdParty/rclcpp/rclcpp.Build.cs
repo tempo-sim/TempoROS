@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using Microsoft.Extensions.Logging;
 using UnrealBuildTool;
 
 public class rclcpp : ModuleRules
@@ -38,7 +39,7 @@ public class rclcpp : ModuleRules
     //
     // This deliberately only drops names, never remaps one: RuntimeDependencies.Add(Path, SourcePath)
     // copies SourcePath to Path at build time, which here would write through a symlink in the source tree.
-    private static IEnumerable<string> OneNamePerLibrary(IEnumerable<string> paths)
+    private static IEnumerable<string> OneNamePerLibrary(IEnumerable<string> paths, ILogger logger)
     {
         List<string> all = paths.Select(p => Path.GetFullPath(p)).Distinct().ToList();
 
@@ -74,10 +75,16 @@ public class rclcpp : ModuleRules
                     continue;
                 }
 
-                Console.WriteLine("rclcpp: Warning: staging all " + library.Count() + " names of " + library.Key + ": " +
-                                  (loaderName == null
-                                      ? "could not read its install name / SONAME"
-                                      : "its install name / SONAME '" + loaderName + "' matches " + matches.Count + " of them"));
+                if (loaderName == null)
+                {
+                    logger.LogWarning("rclcpp: staging all {Count} names of {Library}: could not read its install name / SONAME",
+                        library.Count(), library.Key);
+                }
+                else
+                {
+                    logger.LogWarning("rclcpp: staging all {Count} names of {Library}: its install name / SONAME '{LoaderName}' matches {Matches} of them",
+                        library.Count(), library.Key, loaderName, matches.Count);
+                }
             }
 
             foreach (string p in library)
@@ -116,38 +123,71 @@ public class rclcpp : ModuleRules
                 {
                     return null;
                 }
-                stream.Seek(0x28, SeekOrigin.Begin);
-                long sectionHeaders = reader.ReadInt64();
-                stream.Seek(0x3A, SeekOrigin.Begin);
-                int sectionHeaderSize = reader.ReadUInt16();
-                int sectionCount = reader.ReadUInt16();
-                for (int i = 0; i < sectionCount; i++)
+                // Go through the program headers, as the dynamic loader does, rather than the section
+                // headers, which a library may have stripped. PT_DYNAMIC locates the dynamic table, whose
+                // DT_STRTAB is a virtual address; the PT_LOAD segments map that back to a file offset.
+                stream.Seek(0x20, SeekOrigin.Begin);
+                long programHeaders = reader.ReadInt64();
+                stream.Seek(0x36, SeekOrigin.Begin);
+                int programHeaderSize = reader.ReadUInt16();
+                int programHeaderCount = reader.ReadUInt16();
+
+                List<(long Offset, long Address, long Size)> loads = new List<(long, long, long)>();
+                long dynamicOffset = -1;
+                long dynamicSize = 0;
+                for (int i = 0; i < programHeaderCount; i++)
                 {
-                    long header = sectionHeaders + (long)i * sectionHeaderSize;
-                    stream.Seek(header + 0x04, SeekOrigin.Begin);
-                    if (reader.ReadUInt32() != 6) // SHT_DYNAMIC
+                    stream.Seek(programHeaders + (long)i * programHeaderSize, SeekOrigin.Begin);
+                    uint type = reader.ReadUInt32();
+                    reader.ReadUInt32(); // p_flags
+                    long offset = reader.ReadInt64();
+                    long address = reader.ReadInt64();
+                    reader.ReadInt64(); // p_paddr
+                    long fileSize = reader.ReadInt64();
+                    if (type == 1) // PT_LOAD
                     {
-                        continue;
+                        loads.Add((offset, address, fileSize));
                     }
-                    stream.Seek(header + 0x18, SeekOrigin.Begin);
-                    long dynamicOffset = reader.ReadInt64();
-                    long dynamicSize = reader.ReadInt64();
-                    uint stringSection = reader.ReadUInt32();
-                    stream.Seek(sectionHeaders + (long)stringSection * sectionHeaderSize + 0x18, SeekOrigin.Begin);
-                    long stringsOffset = reader.ReadInt64();
-                    for (long entry = dynamicOffset; entry < dynamicOffset + dynamicSize; entry += 16)
+                    else if (type == 2) // PT_DYNAMIC
                     {
-                        stream.Seek(entry, SeekOrigin.Begin);
-                        long tag = reader.ReadInt64();
-                        long value = reader.ReadInt64();
-                        if (tag == 14) // DT_SONAME
-                        {
-                            return ReadString(stringsOffset + value);
-                        }
-                        if (tag == 0) // DT_NULL
-                        {
-                            break;
-                        }
+                        dynamicOffset = offset;
+                        dynamicSize = fileSize;
+                    }
+                }
+                if (dynamicOffset < 0)
+                {
+                    return null;
+                }
+
+                long soname = -1;
+                long stringTable = -1;
+                for (long entry = dynamicOffset; entry + 16 <= dynamicOffset + dynamicSize; entry += 16)
+                {
+                    stream.Seek(entry, SeekOrigin.Begin);
+                    long tag = reader.ReadInt64();
+                    long value = reader.ReadInt64();
+                    if (tag == 0) // DT_NULL
+                    {
+                        break;
+                    }
+                    if (tag == 14) // DT_SONAME: offset into the string table
+                    {
+                        soname = value;
+                    }
+                    else if (tag == 5) // DT_STRTAB: virtual address of the string table
+                    {
+                        stringTable = value;
+                    }
+                }
+                if (soname < 0 || stringTable < 0)
+                {
+                    return null;
+                }
+                foreach ((long Offset, long Address, long Size) load in loads)
+                {
+                    if (stringTable >= load.Address && stringTable < load.Address + load.Size)
+                    {
+                        return ReadString(load.Offset + (stringTable - load.Address) + soname);
                     }
                 }
                 return null;
@@ -218,13 +258,13 @@ public class rclcpp : ModuleRules
             // placeholders: linking them records those absolute, nonexistent paths in the module,
             // which then fails to load. They are still staged below for the Python bindings.
             LibraryPaths.AddRange(Directory.EnumerateFiles(Path.Combine(ModuleDirectory, "Libraries", "Mac"), "*.dylib", SearchOption.TopDirectoryOnly));
-            RuntimeLibraryPaths.AddRange(OneNamePerLibrary(FindFilesInDirectory(Path.Combine(ModuleDirectory, "Libraries", "Mac"), "dylib")));
+            RuntimeLibraryPaths.AddRange(OneNamePerLibrary(FindFilesInDirectory(Path.Combine(ModuleDirectory, "Libraries", "Mac"), "dylib"), Target.Logger));
             RuntimeLibraryPaths.AddRange(FindFilesInDirectory(Path.Combine(ModuleDirectory, "Libraries", "Mac", "share"), "*"));
         }
         else if (Target.Platform == UnrealTargetPlatform.Linux)
         {
             LibraryPaths.AddRange(FindFilesInDirectory(Path.Combine(ModuleDirectory, "Libraries", "Linux"), "so"));
-            RuntimeLibraryPaths.AddRange(OneNamePerLibrary(FindFilesInDirectory(Path.Combine(ModuleDirectory, "Libraries", "Linux"), "so*")));
+            RuntimeLibraryPaths.AddRange(OneNamePerLibrary(FindFilesInDirectory(Path.Combine(ModuleDirectory, "Libraries", "Linux"), "so*"), Target.Logger));
             RuntimeLibraryPaths.AddRange(FindFilesInDirectory(Path.Combine(ModuleDirectory, "Libraries", "Linux", "share"), "*"));
         }
         else
